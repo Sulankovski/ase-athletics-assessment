@@ -8,7 +8,7 @@ import psycopg2
 
 logger = logging.getLogger(__name__)
 
-BACKEND_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 MIGRATIONS_DIR = BACKEND_DIR / "migrations"
 
 

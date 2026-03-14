@@ -5,7 +5,7 @@ import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import RealDictCursor
 
-BACKEND_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BACKEND_DIR / ".env")
 
 

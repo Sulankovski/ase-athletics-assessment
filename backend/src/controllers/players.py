@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from ..database import get_db_connection
+from ..middleware.database import get_db_connection
 from ..models.player import Player
 
 router = APIRouter(prefix="/players", tags=["Players"])
