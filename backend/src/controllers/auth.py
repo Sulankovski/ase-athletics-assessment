@@ -58,7 +58,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": UserResponse(id=user.id, name=user.name, email=user.email, created_at=user.created_at),
+        "user": UserResponse.model_validate(user),
     }
 
 
@@ -76,7 +76,7 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return UserResponse(id=user.id, name=user.name, email=user.email, created_at=user.created_at)
+    return UserResponse.model_validate(user)
 
 
 @router.post("/logout")
@@ -97,4 +97,4 @@ def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends
     user = db.scalar(stmt)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return UserResponse(id=user.id, name=user.name, email=user.email, created_at=user.created_at)
+    return UserResponse.model_validate(user)
