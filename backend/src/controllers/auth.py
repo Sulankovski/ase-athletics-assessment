@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
 
@@ -5,6 +7,7 @@ from ..middleware.database import get_db_connection
 from ..middleware.security import bearer_scheme, oauth2_scheme
 from ..models.user import UserCreate, UserResponse
 from ..utils.auth_utils import (
+    JWT_EXPIRATION_HOURS,
     create_access_token,
     decode_access_token,
     hash_password,
@@ -24,6 +27,22 @@ def get_current_user(
     payload = decode_access_token(actual_token)
     if payload is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM tokens WHERE jti = %s AND expires_at > NOW()",
+            (jti,),
+        )
+        if not cur.fetchone():
+            cur.close()
+            raise HTTPException(status_code=401, detail="Token invalid or expired")
+        cur.close()
+    finally:
+        conn.close()
     return payload
 
 
@@ -45,9 +64,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         if not verify_password(form_data.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
-        token = create_access_token(
+        token, jti = create_access_token(
             {"sub": str(user["id"]), "email": user["email"], "name": user["name"]}
         )
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO tokens (jti, user_id, expires_at) VALUES (%s, %s, %s)",
+            (jti, user["id"], expires_at),
+        )
+        conn.commit()
+        cur.close()
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -96,7 +123,18 @@ def register(data: UserCreate):
 
 
 @router.post("/logout")
-def logout():
+def logout(current_user: dict = Depends(get_current_user)):
+    """Invalidate the current token by removing it from the token store."""
+    jti = current_user.get("jti")
+    if jti:
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM tokens WHERE jti = %s", (jti,))
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
     return {"message": "Successfully logged out"}
 
 

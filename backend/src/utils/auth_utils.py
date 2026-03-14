@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -27,12 +28,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(pwd_bytes, hashed_password.encode("utf-8"))
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(data: dict) -> tuple[str, str]:
+    """Create JWT and return (token, jti). jti is used for token store lookup."""
     payload = data.copy()
+    jti = str(uuid.uuid4())
     expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+    payload["jti"] = jti
     payload["exp"] = expire
     payload["iat"] = datetime.now(timezone.utc)
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return token, jti
 
 
 def decode_access_token(token: str) -> dict | None:
