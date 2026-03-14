@@ -1,9 +1,11 @@
 import json
 import logging
-import os
 from pathlib import Path
 
-import psycopg2
+from sqlalchemy import select
+
+from backend.src.middleware.database import SessionLocal
+from backend.src.models.player import Player
 
 logger = logging.getLogger(__name__)
 
@@ -21,62 +23,40 @@ def get_value(obj, key, default=NA_STR):
 
 def run_seeds():
     try:
-        conn = psycopg2.connect(
-            host=os.getenv("PGHOST", "localhost"),
-            port=os.getenv("PGPORT", "5432"),
-            dbname=os.getenv("PGDATABASE", "user_data"),
-            user=os.getenv("PGUSER", "postgres"),
-            password=os.getenv("PGPASSWORD", "postgres"),
-        )
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM players")
-        if cur.fetchone()[0] > 0:
-            print("Seeding skipped (table already populated).")
-            cur.close()
-            conn.close()
-            return
+        db = SessionLocal()
+        try:
+            if db.scalar(select(Player).limit(1)):
+                print("Seeding skipped (table already populated).")
+                return
 
-        if not DATA_PATH.exists():
-            logger.warning("Seed data not found: %s", DATA_PATH)
-            cur.close()
-            conn.close()
-            return
+            if not DATA_PATH.exists():
+                logger.warning("Seed data not found: %s", DATA_PATH)
+                return
 
-        with open(DATA_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            with open(DATA_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        players = data.get("players", [])
-        if not players:
-            cur.close()
-            conn.close()
-            return
+            players_data = data.get("players", [])
+            if not players_data:
+                return
 
-        insert_sql = """
-            INSERT INTO players (name, age, team, position, jersey_number, preferred_foot, height, weight, image_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        for p in players:
-            cur.execute(
-                insert_sql,
-                (
-                    get_value(p, "name", NA_STR),
-                    get_value(p, "age", NA_STR),
-                    get_value(p, "team", NA_STR),
-                    get_value(p, "position", NA_STR),
-                    get_value(p, "jerseyNumber", NA_STR),
-                    get_value(p, "preferredFoot", NA_STR),
-                    get_value(p, "height", NA_STR),
-                    get_value(p, "weight", NA_STR),
-                    get_value(p, "imageUrl", NA_STR),
-                ),
-            )
-        conn.commit()
-        cur.close()
-        conn.close()
-        print(f"Seeding completed. ({len(players)} players)")
-    except psycopg2.OperationalError as e:
+            for p in players_data:
+                db.add(
+                    Player(
+                        name=get_value(p, "name", NA_STR),
+                        age=get_value(p, "age", NA_STR),
+                        team=get_value(p, "team", NA_STR),
+                        position=get_value(p, "position", NA_STR),
+                        jersey_number=get_value(p, "jerseyNumber", NA_STR),
+                        preferred_foot=get_value(p, "preferredFoot", NA_STR),
+                        height=get_value(p, "height", NA_STR),
+                        weight=get_value(p, "weight", NA_STR),
+                        image_url=get_value(p, "imageUrl", NA_STR),
+                    )
+                )
+            db.commit()
+            print(f"Seeding completed. ({len(players_data)} players)")
+        finally:
+            db.close()
+    except Exception as e:
         print(f"Seeding skipped (database not available): {e}")
-
-
-if __name__ == "__main__":
-    run_seeds()

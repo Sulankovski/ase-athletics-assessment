@@ -29,7 +29,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(data: dict) -> tuple[str, str]:
-    """Create JWT and return (token, jti). jti is used for token store lookup."""
     payload = data.copy()
     jti = str(uuid.uuid4())
     expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)

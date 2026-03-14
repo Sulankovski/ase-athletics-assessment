@@ -1,28 +1,16 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from ..middleware.database import get_db_connection
-from ..models.player import Player
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ..middleware.database import get_db
+from ..models.player import Player, PlayerSchema
 
 router = APIRouter(prefix="/players", tags=["Players"])
 
 
 @router.get("")
-async def list_players(limit: int = 10):
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT id, name, age, team, position, jersey_number, preferred_foot, height, weight, image_url
-            FROM players
-            ORDER BY id
-            LIMIT %s
-            """,
-            (limit,),
-        )
-        rows = cur.fetchall()
-        cur.close()
-        players = [Player(**dict(row)) for row in rows]
-        return {"players": players}
-    finally:
-        conn.close()
+def list_players(limit: int = 10, db: Session = Depends(get_db)):
+    stmt = select(Player).order_by(Player.id).limit(limit)
+    rows = db.scalars(stmt).all()
+    return {"players": [PlayerSchema.model_validate(p) for p in rows]}

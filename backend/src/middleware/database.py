@@ -1,20 +1,26 @@
 import os
 from pathlib import Path
 
-import psycopg2
 from dotenv import load_dotenv
-from psycopg2.extras import RealDictCursor
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BACKEND_DIR / ".env")
 
+DATABASE_URL = (
+    f"postgresql://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}"
+    f"@{os.getenv('PGHOST')}:{os.getenv('PGPORT')}"
+    f"/{os.getenv('PGDATABASE')}"
+)
 
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv("PGHOST"),
-        port=os.getenv("PGPORT"),
-        dbname=os.getenv("PGDATABASE"),
-        user=os.getenv("PGUSER"),
-        password=os.getenv("PGPASSWORD"),
-        cursor_factory=RealDictCursor,
-    )
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
