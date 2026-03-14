@@ -8,8 +8,6 @@ import jwt
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
-
-# bcrypt has a 72-byte limit; truncate to avoid ValueError
 BCRYPT_MAX_BYTES = 72
 
 

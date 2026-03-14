@@ -1,10 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.security import HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..exceptions.auth import (
+    InvalidCredentialsError,
+    TokenInvalidOrExpiredError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from ..middleware.database import get_db
 from ..middleware.security import bearer_scheme, oauth2_scheme
 from ..models.user import Token, User, UserCreate, UserResponse
@@ -26,16 +32,16 @@ def get_current_user(
 ):
     actual_token = token or (bearer.credentials if bearer else None)
     if not actual_token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        raise TokenInvalidOrExpiredError("Not authenticated")
     payload = decode_access_token(actual_token)
     if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise TokenInvalidOrExpiredError("Invalid or expired token")
     jti = payload.get("jti")
     if not jti:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise TokenInvalidOrExpiredError("Invalid token")
     stmt = select(Token).where(Token.jti == jti, Token.expires_at > datetime.now(timezone.utc))
     if db.scalar(stmt) is None:
-        raise HTTPException(status_code=401, detail="Token invalid or expired")
+        raise TokenInvalidOrExpiredError("Token invalid or expired")
     return payload
 
 
@@ -44,9 +50,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     stmt = select(User).where(User.email == form_data.username)
     user = db.scalar(stmt)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise InvalidCredentialsError()
     if not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise InvalidCredentialsError()
 
     token, jti = create_access_token(
         {"sub": str(user.id), "email": user.email, "name": user.name}
@@ -66,7 +72,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def register(data: UserCreate, db: Session = Depends(get_db)):
     stmt = select(User).where(User.email == data.email)
     if db.scalar(stmt):
-        raise HTTPException(status_code=400, detail="A user with this email already exists")
+        raise UserAlreadyExistsError()
 
     user = User(
         name=data.name,
@@ -96,5 +102,5 @@ def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends
     stmt = select(User).where(User.id == int(current_user["sub"]))
     user = db.scalar(stmt)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise UserNotFoundError()
     return UserResponse.model_validate(user)
