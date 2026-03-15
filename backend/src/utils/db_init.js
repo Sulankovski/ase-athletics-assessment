@@ -1,4 +1,4 @@
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
 import { pool } from "../middleware/database.js";
@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const BACKEND_DIR = join(__dirname, "..", "..");
 const MIGRATIONS_DIR = join(BACKEND_DIR, "migrations");
+const SEEDS_DIR = join(BACKEND_DIR, "seeds");
 
 export async function runMigrations() {
   try {
@@ -46,6 +47,43 @@ export async function runMigrations() {
   }
 }
 
+export async function runSeeds() {
+  try {
+    const seedFiles = fs.readdirSync(SEEDS_DIR).filter((f) => f.endsWith(".js")).sort();
+    const client = await pool.connect();
+    try {
+      for (const seedFile of seedFiles) {
+        const existsResult = await client.query(
+          "SELECT 1 FROM seeds_run WHERE script_name = $1",
+          [seedFile]
+        );
+        if (existsResult.rows.length > 0) {
+          console.log(`Seeding skipped (already run): ${seedFile}`);
+          continue;
+        }
+
+        const seedPath = join(SEEDS_DIR, seedFile);
+        const mod = await import(pathToFileURL(seedPath).href);
+        const run = mod.default ?? mod.run;
+        if (typeof run !== "function") {
+          console.log(`Seeding skipped (no default/run export): ${seedFile}`);
+          continue;
+        }
+
+        const success = await run();
+        if (success) {
+          await client.query("INSERT INTO seeds_run (script_name) VALUES ($1)", [seedFile]);
+          console.log(`Seeding completed: ${seedFile}`);
+        }
+      }
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    console.log(`Seeding error: ${e.message}`);
+  }
+}
+
 export async function initDb() {
   const maxAttempts = 10;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -65,4 +103,5 @@ export async function initDb() {
   }
 
   await runMigrations();
+  await runSeeds();
 }
