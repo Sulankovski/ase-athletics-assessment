@@ -2,7 +2,6 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
 import { pool } from "../middleware/database.js";
-import { runSeeds } from "../../seeds/populate_user_data.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,10 +13,26 @@ export async function runMigrations() {
     const sqlFiles = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
     const client = await pool.connect();
     try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS migrations_run (
+          filename VARCHAR(255) PRIMARY KEY
+        );
+      `);
+
       for (const sqlFile of sqlFiles) {
+        const existsResult = await client.query(
+          "SELECT 1 FROM migrations_run WHERE filename = $1",
+          [sqlFile]
+        );
+        if (existsResult.rows.length > 0) {
+          console.log(`Skipping migration (already run): ${sqlFile}`);
+          continue;
+        }
+
         const sqlPath = join(MIGRATIONS_DIR, sqlFile);
         const sql = fs.readFileSync(sqlPath, "utf-8");
         await client.query(sql);
+        await client.query("INSERT INTO migrations_run (filename) VALUES ($1)", [sqlFile]);
         console.log(`Running migration: ${sqlFile}`);
       }
       console.log("Migrations completed.");
@@ -49,7 +64,5 @@ export async function initDb() {
     }
   }
 
-  if (await runMigrations()) {
-    await runSeeds();
-  }
+  await runMigrations();
 }

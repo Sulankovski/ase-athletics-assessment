@@ -10,9 +10,15 @@ dotenv.config({ path: join(BACKEND_DIR, ".env") });
 
 const { Pool } = pg;
 
-const DATABASE_URL = `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT}/${process.env.PGDATABASE}`;
+const ssl =
+  process.env.NODE_ENV === "production"
+    ? { require: true, rejectUnauthorized: false }
+    : false;
 
-export const pool = new Pool({ connectionString: DATABASE_URL });
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl,
+});
 
 export function getDb(req, res, next) {
   pool.connect((err, client, release) => {

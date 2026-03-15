@@ -5,13 +5,13 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: user_data
+      POSTGRES_DB: ase_athletics
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d user_data"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ase_athletics"]
       interval: 5s
       timeout: 5s
       retries: 5

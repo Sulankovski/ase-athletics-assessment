@@ -6,8 +6,7 @@ import { pool } from "../src/middleware/database.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const BACKEND_DIR = join(__dirname, "..");
-const PROJECT_ROOT = join(BACKEND_DIR, "..");
-const DATA_PATH = join(PROJECT_ROOT, "data", "players_Data_production.json");
+const DATA_PATH = join(BACKEND_DIR, "data", "players_Data_production.json");
 
 const NA_STR = "N/A";
 
@@ -16,7 +15,7 @@ function getValue(obj, key, defaultVal = NA_STR) {
   return val == null || val === "" ? defaultVal : String(val);
 }
 
-export async function runSeeds() {
+async function runSeeds() {
   try {
     const client = await pool.connect();
     try {
@@ -66,3 +65,5 @@ export async function runSeeds() {
     console.log(`Seeding skipped (database not available): ${e.message}`);
   }
 }
+
+runSeeds().then(() => process.exit(0)).catch(() => process.exit(1));
