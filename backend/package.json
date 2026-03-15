@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/main.js",
     "dev": "node --watch src/main.js",
-    "seed": "node seeds/populate_user_data.js"
+    "seed:players": "node seeds/populate_user_data.js"
   },
   "dependencies": {
     "bcrypt": "^4.0.1",
