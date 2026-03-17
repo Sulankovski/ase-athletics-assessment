@@ -1,18 +1,12 @@
 import { Router } from "express";
-import { toPlayerSchema } from "../models/player.js";
+import * as playersService from "../services/players.js";
 
 const router = Router();
 
 router.get("", async (req, res, next) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 100);
-    const db = req.db;
-    const result = await db.query(
-      "SELECT * FROM players ORDER BY id LIMIT $1",
-      [limit]
-    );
-    const players = result.rows.map(toPlayerSchema);
-    res.json({ players });
+    const result = await playersService.getPlayers(req.query, req.db);
+    res.json(result);
   } catch (err) {
     next(err);
   }

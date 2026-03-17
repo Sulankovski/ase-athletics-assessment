@@ -1,4 +1,4 @@
-export function toPlayerSchema(row) {
+export function toPlayerResponse(row) {
   return {
     id: row.id,
     name: row.name,
