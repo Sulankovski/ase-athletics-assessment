@@ -1,5 +1,5 @@
 import { validatePlayerCreate, validatePlayerUpdate, toPlayerResponse } from "../models/player.js";
-import { findAll, findById, create, update } from "../repositories/player.js";
+import { findAll, findById, create, update, deleteById } from "../repositories/player.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
 
 export async function createPlayer(body, db) {
@@ -16,6 +16,13 @@ export async function updatePlayer(id, body, db) {
   const validated = validatePlayerUpdate(body);
   const row = await update(id, validated, db);
   return toPlayerResponse(row);
+}
+
+export async function deletePlayer(id, db) {
+  const deleted = await deleteById(id, db);
+  if (!deleted) {
+    throw new PlayerNotFoundError();
+  }
 }
 
 export async function getPlayerById(id, db) {

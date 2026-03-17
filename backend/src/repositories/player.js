@@ -43,6 +43,11 @@ export async function update(id, data, db) {
   return result.rows[0];
 }
 
+export async function deleteById(id, db) {
+  const result = await db.query("DELETE FROM players WHERE id = $1 RETURNING id", [parseInt(id, 10)]);
+  return result.rowCount > 0;
+}
+
 export async function findById(id, db) {
   const result = await db.query("SELECT * FROM players WHERE id = $1", [parseInt(id, 10)]);
   return result.rows[0] ?? null;

@@ -33,6 +33,15 @@ router.put("/:id", async (req, res, next) => {
   }
 });
 
+router.delete("/:id", async (req, res, next) => {
+  try {
+    await playersService.deletePlayer(req.params.id, req.db);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
     const player = await playersService.getPlayerById(req.params.id, req.db);
