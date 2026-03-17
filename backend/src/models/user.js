@@ -1,33 +1,35 @@
-import validator from "validator";
+import Joi from "joi";
+import { ValidationError } from "../exceptions/validation.js";
+
+function normalizeUserInput(data) {
+  const d = data ?? {};
+  return {
+    name: d.name ?? d.Name,
+    email: d.email ?? d.Email,
+    password: d.password ?? d.Password,
+  };
+}
+
+const userCreateSchema = Joi.object({
+  name: Joi.string().trim().required(),
+  email: Joi.string().email().max(255).lowercase().trim().required(),
+  password: Joi.string()
+    .min(7)
+    .pattern(/^(?=.*[a-zA-Z])(?=.*\d).+$/)
+    .required()
+    .messages({
+      "string.min": "Password must be at least 7 characters",
+      "string.pattern.base": "Password must contain at least one letter and one number",
+    }),
+});
 
 export function validateUserCreate(data) {
-  const { name, email, password } = data;
-  if (!name || typeof name !== "string") {
-    throw new Error("name is required");
+  const normalized = normalizeUserInput(data);
+  const { error, value } = userCreateSchema.validate(normalized, { abortEarly: false });
+  if (error) {
+    throw new ValidationError(error.details[0].message);
   }
-  if (!email || typeof email !== "string") {
-    throw new Error("email is required");
-  }
-  const normalizedEmail = email.trim().toLowerCase();
-  if (normalizedEmail.length > 255) {
-    throw new Error("Email is too long");
-  }
-  if (!validator.isEmail(normalizedEmail)) {
-    throw new Error("Invalid email format");
-  }
-  if (!password || typeof password !== "string") {
-    throw new Error("password is required");
-  }
-  if (password.length < 7) {
-    throw new Error("Password must be at least 7 characters");
-  }
-  if (!/[a-zA-Z]/.test(password)) {
-    throw new Error("Password must contain at least one letter");
-  }
-  if (!/\d/.test(password)) {
-    throw new Error("Password must contain at least one number");
-  }
-  return { name, email: normalizedEmail, password };
+  return value;
 }
 
 export function toUserResponse(row) {

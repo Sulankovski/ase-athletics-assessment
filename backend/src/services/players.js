@@ -1,6 +1,12 @@
-import { toPlayerResponse } from "../models/player.js";
-import { findAll, findById } from "../repositories/player.js";
+import { validatePlayerCreate, toPlayerResponse } from "../models/player.js";
+import { findAll, findById, create } from "../repositories/player.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
+
+export async function createPlayer(body, db) {
+  const validated = validatePlayerCreate(body);
+  const row = await create(validated, db);
+  return toPlayerResponse(row);
+}
 
 export async function getPlayerById(id, db) {
   const row = await findById(id, db);

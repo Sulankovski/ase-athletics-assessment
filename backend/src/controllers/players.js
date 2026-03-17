@@ -6,6 +6,15 @@ const router = Router();
 
 router.use(getCurrentUser);
 
+router.post("", async (req, res, next) => {
+  try {
+    const player = await playersService.createPlayer(req.body, req.db);
+    res.status(201).json(player);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("", async (req, res, next) => {
   try {
     const result = await playersService.getPlayers(req.query, req.db);

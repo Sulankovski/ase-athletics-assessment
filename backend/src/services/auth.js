@@ -58,30 +58,17 @@ export async function login(body, db) {
 }
 
 export async function register(body, db) {
-  try {
-    const validated = validateUserCreate(body);
-    if (await existsByEmail(validated.email, db)) {
-      throw new UserAlreadyExistsError();
-    }
-
-    const passwordHash = hashPassword(validated.password);
-    const user = await createUser(
-      { name: validated.name, email: validated.email, password_hash: passwordHash },
-      db
-    );
-    return toUserResponse(user);
-  } catch (err) {
-    if (err instanceof UserAlreadyExistsError) {
-      throw err;
-    }
-    if (err.message?.includes("Email") || err.message?.includes("Password") || err.message?.includes("name")) {
-      const e = new Error(err.message);
-      e.statusCode = 400;
-      e.detail = err.message;
-      throw e;
-    }
-    throw err;
+  const validated = validateUserCreate(body);
+  if (await existsByEmail(validated.email, db)) {
+    throw new UserAlreadyExistsError();
   }
+
+  const passwordHash = hashPassword(validated.password);
+  const user = await createUser(
+    { name: validated.name, email: validated.email, password_hash: passwordHash },
+    db
+  );
+  return toUserResponse(user);
 }
 
 export async function logout(currentUser, db) {
