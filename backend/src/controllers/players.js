@@ -24,6 +24,15 @@ router.get("", async (req, res, next) => {
   }
 });
 
+router.put("/:id", async (req, res, next) => {
+  try {
+    const player = await playersService.updatePlayer(req.params.id, req.body, req.db);
+    res.json(player);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
     const player = await playersService.getPlayerById(req.params.id, req.db);

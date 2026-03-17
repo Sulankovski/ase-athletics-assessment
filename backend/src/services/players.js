@@ -1,10 +1,20 @@
-import { validatePlayerCreate, toPlayerResponse } from "../models/player.js";
-import { findAll, findById, create } from "../repositories/player.js";
+import { validatePlayerCreate, validatePlayerUpdate, toPlayerResponse } from "../models/player.js";
+import { findAll, findById, create, update } from "../repositories/player.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
 
 export async function createPlayer(body, db) {
   const validated = validatePlayerCreate(body);
   const row = await create(validated, db);
+  return toPlayerResponse(row);
+}
+
+export async function updatePlayer(id, body, db) {
+  const existing = await findById(id, db);
+  if (!existing) {
+    throw new PlayerNotFoundError();
+  }
+  const validated = validatePlayerUpdate(body);
+  const row = await update(id, validated, db);
   return toPlayerResponse(row);
 }
 

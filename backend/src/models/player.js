@@ -28,6 +28,42 @@ const playerCreateSchema = Joi.object({
   image_url: Joi.string().trim().required(),
 });
 
+const UPDATEABLE_FIELDS = [
+  { key: "age", aliases: ["age", "Age"] },
+  { key: "team", aliases: ["team", "Team"] },
+  { key: "position", aliases: ["position", "Position"] },
+  { key: "jersey_number", aliases: ["jersey_number", "jerseyNumber", "JerseyNumber"] },
+  { key: "preferred_foot", aliases: ["preferred_foot", "preferredFoot", "PreferredFoot"] },
+  { key: "height", aliases: ["height", "Height"] },
+  { key: "weight", aliases: ["weight", "Weight"] },
+  { key: "image_url", aliases: ["image_url", "imageUrl", "ImageUrl"] },
+];
+
+function normalizePlayerUpdateInput(data) {
+  const d = data ?? {};
+  const result = {};
+  for (const { key, aliases } of UPDATEABLE_FIELDS) {
+    for (const a of aliases) {
+      if (d[a] !== undefined && d[a] !== null) {
+        result[key] = String(d[a]).trim();
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+const playerUpdateSchema = Joi.object({
+  age: Joi.string().trim(),
+  team: Joi.string().trim(),
+  position: Joi.string().trim(),
+  jersey_number: Joi.string().trim(),
+  preferred_foot: Joi.string().trim(),
+  height: Joi.string().trim(),
+  weight: Joi.string().trim(),
+  image_url: Joi.string().trim(),
+}).min(1);
+
 export function validatePlayerCreate(data) {
   const normalized = normalizePlayerInput(data);
   const { error, value } = playerCreateSchema.validate(normalized);
@@ -35,6 +71,22 @@ export function validatePlayerCreate(data) {
     throw new ValidationError(error.details[0].message);
   }
   return value;
+}
+
+export function validatePlayerUpdate(data) {
+  const normalized = normalizePlayerUpdateInput(data);
+  const { error, value } = playerUpdateSchema.validate(normalized);
+  if (error) {
+    const msg = error.details[0].message.replace(/"([^"]+)"/g, "$1");
+    throw new ValidationError(msg);
+  }
+  const result = Object.fromEntries(
+    Object.entries(value).filter(([, v]) => v !== undefined && v !== "")
+  );
+  if (Object.keys(result).length === 0) {
+    throw new ValidationError("At least one field is required");
+  }
+  return result;
 }
 
 export function toPlayerResponse(row) {

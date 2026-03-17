@@ -17,6 +17,32 @@ export async function create(player, db) {
   return result.rows[0];
 }
 
+const UPDATEABLE_COLUMNS = [
+  "age",
+  "team",
+  "position",
+  "jersey_number",
+  "preferred_foot",
+  "height",
+  "weight",
+  "image_url",
+];
+
+export async function update(id, data, db) {
+  const keys = UPDATEABLE_COLUMNS.filter((k) => data[k] !== undefined);
+  if (keys.length === 0) return findById(id, db);
+
+  const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(", ");
+  const values = keys.map((k) => data[k]);
+  values.push(parseInt(id, 10));
+
+  const result = await db.query(
+    `UPDATE players SET ${setClause} WHERE id = $${keys.length + 1} RETURNING *`,
+    values
+  );
+  return result.rows[0];
+}
+
 export async function findById(id, db) {
   const result = await db.query("SELECT * FROM players WHERE id = $1", [parseInt(id, 10)]);
   return result.rows[0] ?? null;
