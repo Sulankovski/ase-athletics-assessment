@@ -26,7 +26,7 @@ router.get("", async (req, res, next) => {
 
 router.get("/search", async (req, res, next) => {
   try {
-    const result = await playersService.searchPlayers(req.query, req.db);
+    const result = await playersService.searchPlayersByText(req.query, req.db);
     res.json(result);
   } catch (err) {
     next(err);

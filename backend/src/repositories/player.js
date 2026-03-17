@@ -61,7 +61,7 @@ export async function findAll(limit, db) {
   return result.rows;
 }
 
-const SEARCH_COLUMNS = [
+export const SEARCH_COLUMNS = [
   "name",
   "age",
   "team",
@@ -73,12 +73,29 @@ const SEARCH_COLUMNS = [
   "image_url",
 ];
 
-export async function search(term, limit, db) {
+export async function searchByText(term, limit, db) {
   const pattern = "%" + String(term ?? "").trim() + "%";
   const conditions = SEARCH_COLUMNS.map((col) => `${col} ILIKE $1`).join(" OR ");
   const result = await db.query(
     `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $2`,
     [pattern, limit]
+  );
+  return result.rows;
+}
+
+export async function searchByParameters(filters, limit, db) {
+  const keys = Object.keys(filters).filter(
+    (k) => SEARCH_COLUMNS.includes(k) && filters[k] != null && String(filters[k]).trim() !== ""
+  );
+  if (keys.length === 0) {
+    return findAll(limit, db);
+  }
+  const conditions = keys.map((col, i) => `${col} ILIKE $${i + 1}`).join(" AND ");
+  const values = keys.map((k) => String(filters[k]).trim());
+  values.push(limit);
+  const result = await db.query(
+    `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $${keys.length + 1}`,
+    values
   );
   return result.rows;
 }
