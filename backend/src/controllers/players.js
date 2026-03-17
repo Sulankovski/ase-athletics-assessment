@@ -24,6 +24,15 @@ router.get("", async (req, res, next) => {
   }
 });
 
+router.get("/search", async (req, res, next) => {
+  try {
+    const result = await playersService.searchPlayers(req.query, req.db);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put("/:id", async (req, res, next) => {
   try {
     const player = await playersService.updatePlayer(req.params.id, req.body, req.db);

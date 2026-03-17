@@ -1,5 +1,5 @@
 import { validatePlayerCreate, validatePlayerUpdate, toPlayerResponse } from "../models/player.js";
-import { findAll, findById, create, update, deleteById } from "../repositories/player.js";
+import { findAll, findById, create, update, deleteById, search } from "../repositories/player.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
 
 export async function createPlayer(body, db) {
@@ -36,6 +36,17 @@ export async function getPlayerById(id, db) {
 export async function getPlayers(query, db) {
   const limit = Math.min(parseInt(query?.limit, 10) || 10, 100);
   const rows = await findAll(limit, db);
+  const players = rows.map(toPlayerResponse);
+  return { players };
+}
+
+export async function searchPlayers(query, db) {
+  const term = (query?.q ?? query?.query ?? "").trim();
+  const limit = Math.min(parseInt(query?.limit, 10) || 50, 100);
+  if (!term) {
+    return { players: [] };
+  }
+  const rows = await search(term, limit, db);
   const players = rows.map(toPlayerResponse);
   return { players };
 }

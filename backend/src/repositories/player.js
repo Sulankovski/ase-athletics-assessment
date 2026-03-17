@@ -60,3 +60,25 @@ export async function findAll(limit, db) {
   );
   return result.rows;
 }
+
+const SEARCH_COLUMNS = [
+  "name",
+  "age",
+  "team",
+  "position",
+  "jersey_number",
+  "preferred_foot",
+  "height",
+  "weight",
+  "image_url",
+];
+
+export async function search(term, limit, db) {
+  const pattern = "%" + String(term ?? "").trim() + "%";
+  const conditions = SEARCH_COLUMNS.map((col) => `${col} ILIKE $1`).join(" OR ");
+  const result = await db.query(
+    `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $2`,
+    [pattern, limit]
+  );
+  return result.rows;
+}
