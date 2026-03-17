@@ -1,5 +1,14 @@
 import { toPlayerResponse } from "../models/player.js";
-import { findAll } from "../repositories/player.js";
+import { findAll, findById } from "../repositories/player.js";
+import { PlayerNotFoundError } from "../exceptions/players.js";
+
+export async function getPlayerById(id, db) {
+  const row = await findById(id, db);
+  if (!row) {
+    throw new PlayerNotFoundError();
+  }
+  return toPlayerResponse(row);
+}
 
 export async function getPlayers(query, db) {
   const limit = Math.min(parseInt(query?.limit, 10) || 10, 100);
