@@ -7,6 +7,9 @@ import {
   deleteById,
   searchByText,
   searchByParameters,
+  countAll,
+  countSearchByText,
+  countSearchByParameters,
   SEARCH_COLUMNS,
 } from "../repositories/player.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
@@ -42,29 +45,59 @@ export async function getPlayerById(id, db) {
   return toPlayerResponse(row);
 }
 
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+
+function getPaginationParams(query) {
+  const page = Math.max(1, parseInt(query?.page, 10) || 1);
+  const limit = Math.min(
+    Math.max(1, parseInt(query?.limit, 10) || DEFAULT_PAGE_SIZE),
+    MAX_PAGE_SIZE
+  );
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
+
 export async function getPlayers(query, db) {
-  const limit = Math.min(parseInt(query?.limit, 10) || 10, 100);
+  const { page, limit, offset } = getPaginationParams(query);
   const filters = {};
   for (const key of Object.keys(query ?? {})) {
-    if (SEARCH_COLUMNS.includes(key) && key !== "limit") {
+    if (SEARCH_COLUMNS.includes(key) && key !== "limit" && key !== "page") {
       filters[key] = query[key];
     }
   }
-  const rows =
+  const [rows, total] =
     Object.keys(filters).length > 0
-      ? await searchByParameters(filters, limit, db)
-      : await findAll(limit, db);
+      ? await Promise.all([
+          searchByParameters(filters, limit, offset, db),
+          countSearchByParameters(filters, db),
+        ])
+      : await Promise.all([
+          findAll(limit, offset, db),
+          countAll(db),
+        ]);
   const players = rows.map(toPlayerResponse);
-  return { players };
+  const totalPages = Math.ceil(total / limit);
+  return {
+    players,
+    pagination: { page, limit, total, totalPages },
+  };
 }
 
 export async function searchPlayersByText(query, db) {
   const term = (query?.q ?? query?.query ?? "").trim();
-  const limit = Math.min(parseInt(query?.limit, 10) || 50, 100);
   if (!term) {
-    return { players: [] };
+    return { players: [], pagination: { page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, totalPages: 0 } };
   }
-  const rows = await searchByText(term, limit, db);
+  const { page, limit, offset } = getPaginationParams(query);
+  const [rows, total] = await Promise.all([
+    searchByText(term, limit, offset, db),
+    countSearchByText(term, db),
+  ]);
   const players = rows.map(toPlayerResponse);
-  return { players };
+  const totalPages = Math.ceil(total / limit);
+  return {
+    players,
+    pagination: { page, limit, total, totalPages },
+  };
 }

@@ -53,12 +53,17 @@ export async function findById(id, db) {
   return result.rows[0] ?? null;
 }
 
-export async function findAll(limit, db) {
+export async function findAll(limit, offset, db) {
   const result = await db.query(
-    "SELECT * FROM players ORDER BY id LIMIT $1",
-    [limit]
+    "SELECT * FROM players ORDER BY id LIMIT $1 OFFSET $2",
+    [limit, offset]
   );
   return result.rows;
+}
+
+export async function countAll(db) {
+  const result = await db.query("SELECT COUNT(*)::int AS total FROM players");
+  return result.rows[0].total;
 }
 
 export const SEARCH_COLUMNS = [
@@ -73,29 +78,55 @@ export const SEARCH_COLUMNS = [
   "image_url",
 ];
 
-export async function searchByText(term, limit, db) {
+export async function searchByText(term, limit, offset, db) {
   const pattern = "%" + String(term ?? "").trim() + "%";
   const conditions = SEARCH_COLUMNS.map((col) => `${col} ILIKE $1`).join(" OR ");
   const result = await db.query(
-    `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $2`,
-    [pattern, limit]
+    `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $2 OFFSET $3`,
+    [pattern, limit, offset]
   );
   return result.rows;
 }
 
-export async function searchByParameters(filters, limit, db) {
+export async function countSearchByText(term, db) {
+  const pattern = "%" + String(term ?? "").trim() + "%";
+  const conditions = SEARCH_COLUMNS.map((col) => `${col} ILIKE $1`).join(" OR ");
+  const result = await db.query(
+    `SELECT COUNT(*)::int AS total FROM players WHERE ${conditions}`,
+    [pattern]
+  );
+  return result.rows[0].total;
+}
+
+export async function searchByParameters(filters, limit, offset, db) {
   const keys = Object.keys(filters).filter(
     (k) => SEARCH_COLUMNS.includes(k) && filters[k] != null && String(filters[k]).trim() !== ""
   );
   if (keys.length === 0) {
-    return findAll(limit, db);
+    return findAll(limit, offset, db);
   }
   const conditions = keys.map((col, i) => `${col} ILIKE $${i + 1}`).join(" AND ");
   const values = keys.map((k) => String(filters[k]).trim());
-  values.push(limit);
+  values.push(limit, offset);
   const result = await db.query(
-    `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $${keys.length + 1}`,
+    `SELECT * FROM players WHERE ${conditions} ORDER BY id LIMIT $${keys.length + 1} OFFSET $${keys.length + 2}`,
     values
   );
   return result.rows;
+}
+
+export async function countSearchByParameters(filters, db) {
+  const keys = Object.keys(filters).filter(
+    (k) => SEARCH_COLUMNS.includes(k) && filters[k] != null && String(filters[k]).trim() !== ""
+  );
+  if (keys.length === 0) {
+    return countAll(db);
+  }
+  const conditions = keys.map((col, i) => `${col} ILIKE $${i + 1}`).join(" AND ");
+  const values = keys.map((k) => String(filters[k]).trim());
+  const result = await db.query(
+    `SELECT COUNT(*)::int AS total FROM players WHERE ${conditions}`,
+    values
+  );
+  return result.rows[0].total;
 }
