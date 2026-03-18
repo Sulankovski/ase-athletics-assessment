@@ -148,9 +148,19 @@ async function seedPlayerStatsAttributes() {
          ON CONFLICT (player_id) DO UPDATE SET ${attrUpdateSet}, updated_at = NOW()`,
         [playerId, ...attrValues]
       );
+
+      const contract = p.contract ?? {};
+      const salary = contract.salary ?? contract.Salary ?? null;
+      const contractEnd = contract.contractEnd ?? contract.contract_end ?? contract.ContractEnd ?? null;
+      await client.query(
+        `INSERT INTO player_contracts (player_id, salary, contract_end) 
+         VALUES ($1, $2, $3)
+         ON CONFLICT (player_id) DO UPDATE SET salary = EXCLUDED.salary, contract_end = EXCLUDED.contract_end`,
+        [playerId, salary, contractEnd]
+      );
     }
 
-    console.log(`Player stats & attributes seeding completed. (${playersData.length} players)`);
+    console.log(`Player stats, attributes & contracts seeding completed. (${playersData.length} players)`);
     return true;
   } catch (e) {
     console.log(`Player stats & attributes seeding error: ${e.message}`);

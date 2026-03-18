@@ -159,6 +159,50 @@ export function parseAttributesForUpdate(data) {
   return result;
 }
 
+const CONTRACT_FIELD_MAP = [
+  ["salary", ["salary", "Salary"]],
+  ["contract_end", ["contract_end", "contractEnd", "ContractEnd"]],
+];
+
+export function parseContractForCreate(data) {
+  const d = data ?? {};
+  const result = {};
+  for (const [dbKey, aliases] of CONTRACT_FIELD_MAP) {
+    const val = getVal(d, aliases);
+    result[dbKey] = dbKey === "salary" ? toNum(val) : (val != null ? String(val).trim() : null);
+  }
+  return result;
+}
+
+export function parseContractForUpdate(data) {
+  const d = data ?? {};
+  const result = {};
+  for (const [dbKey, aliases] of CONTRACT_FIELD_MAP) {
+    const val = getVal(d, aliases);
+    if (val !== undefined && val !== null) {
+      result[dbKey] =
+        dbKey === "salary" ? toNum(val) : (typeof val === "string" ? val.trim() : String(val));
+    }
+  }
+  return result;
+}
+
+function formatDateOnly(val) {
+  if (val == null) return null;
+  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) return val.substring(0, 10);
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function toPlayerContractResponse(row) {
+  if (!row) return null;
+  return {
+    salary: row.salary != null ? Number(row.salary) : null,
+    contract_end: formatDateOnly(row.contract_end),
+  };
+}
+
 export function validatePlayerCreate(data) {
   const normalized = normalizePlayerInput(data);
   const { error, value } = playerCreateSchema.validate(normalized);
@@ -185,7 +229,7 @@ export function validatePlayerUpdate(data) {
   return result;
 }
 
-export function toPlayerResponse(row, stats = null, attributes = null) {
+export function toPlayerResponse(row, stats = null, attributes = null, contract = null) {
   return {
     id: row.id,
     name: row.name,
@@ -201,6 +245,7 @@ export function toPlayerResponse(row, stats = null, attributes = null) {
     updated_at: row.updated_at,
     stats: toPlayerStatsResponse(stats),
     attributes: toPlayerAttributesResponse(attributes),
+    contract: toPlayerContractResponse(contract),
   };
 }
 

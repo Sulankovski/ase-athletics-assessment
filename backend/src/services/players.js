@@ -5,6 +5,8 @@ import {
   parseAttributesForCreate,
   parseStatsForUpdate,
   parseAttributesForUpdate,
+  parseContractForCreate,
+  parseContractForUpdate,
   toPlayerResponse,
 } from "../models/player.js";
 import {
@@ -22,28 +24,37 @@ import {
 } from "../repositories/player.js";
 import * as playerStatsRepo from "../repositories/player_stats.js";
 import * as playerAttributesRepo from "../repositories/player_attributes.js";
+import * as playerContractsRepo from "../repositories/player_contracts.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
 import { ValidationError } from "../exceptions/validation.js";
 
 async function enrichPlayer(playerRow, db) {
-  const [stats, attributes] = await Promise.all([
+  const [stats, attributes, contract] = await Promise.all([
     playerStatsRepo.findByPlayerId(playerRow.id, db),
     playerAttributesRepo.findByPlayerId(playerRow.id, db),
+    playerContractsRepo.findByPlayerId(playerRow.id, db),
   ]);
-  return toPlayerResponse(playerRow, stats, attributes);
+  return toPlayerResponse(playerRow, stats, attributes, contract);
 }
 
 async function enrichPlayers(playerRows, db) {
   if (playerRows.length === 0) return [];
   const ids = playerRows.map((p) => p.id);
-  const [statsRows, attrRows] = await Promise.all([
+  const [statsRows, attrRows, contractRows] = await Promise.all([
     playerStatsRepo.findByPlayerIds(ids, db),
     playerAttributesRepo.findByPlayerIds(ids, db),
+    playerContractsRepo.findByPlayerIds(ids, db),
   ]);
   const statsByPlayer = Object.fromEntries(statsRows.map((r) => [r.player_id, r]));
   const attrsByPlayer = Object.fromEntries(attrRows.map((r) => [r.player_id, r]));
+  const contractsByPlayer = Object.fromEntries(contractRows.map((r) => [r.player_id, r]));
   return playerRows.map((p) =>
-    toPlayerResponse(p, statsByPlayer[p.id] ?? null, attrsByPlayer[p.id] ?? null)
+    toPlayerResponse(
+      p,
+      statsByPlayer[p.id] ?? null,
+      attrsByPlayer[p.id] ?? null,
+      contractsByPlayer[p.id] ?? null
+    )
   );
 }
 
@@ -52,8 +63,12 @@ export async function createPlayer(body, db) {
   const row = await create(validated, db);
   const stats = parseStatsForCreate(body.stats ?? body.Stats);
   const attributes = parseAttributesForCreate(body.attributes ?? body.Attributes);
+  const contract = parseContractForCreate(body.contract ?? body.Contract);
   await playerStatsRepo.create(row.id, stats, db);
   await playerAttributesRepo.create(row.id, attributes, db);
+  if (contract.salary != null || contract.contract_end != null) {
+    await playerContractsRepo.create(row.id, contract, db);
+  }
   return enrichPlayer(row, db);
 }
 
@@ -65,6 +80,7 @@ export async function updatePlayer(id, body, db) {
   let row = existing;
   const statsUpdates = parseStatsForUpdate(body.stats ?? body.Stats);
   const attrUpdates = parseAttributesForUpdate(body.attributes ?? body.Attributes);
+  const contractUpdates = parseContractForUpdate(body.contract ?? body.Contract);
   const playerUpdates = parsePlayerUpdate(body);
   if (Object.keys(playerUpdates).length > 0) {
     row = await update(id, playerUpdates, db);
@@ -87,13 +103,23 @@ export async function updatePlayer(id, body, db) {
       await playerAttributesRepo.create(id, fullAttrs, db);
     }
   }
+  if (Object.keys(contractUpdates).length > 0) {
+    const existingContract = await playerContractsRepo.findByPlayerId(id, db);
+    if (existingContract) {
+      await playerContractsRepo.update(id, contractUpdates, db);
+    } else {
+      const fullContract = { ...parseContractForCreate({}), ...contractUpdates };
+      await playerContractsRepo.create(id, fullContract, db);
+    }
+  }
   if (
     Object.keys(playerUpdates).length === 0 &&
     Object.keys(statsUpdates).length === 0 &&
-    Object.keys(attrUpdates).length === 0
+    Object.keys(attrUpdates).length === 0 &&
+    Object.keys(contractUpdates).length === 0
   ) {
     throw new ValidationError(
-      "At least one field is required (player fields, stats, or attributes)"
+      "At least one field is required (player fields, stats, attributes, or contract)"
     );
   }
   return enrichPlayer(row, db);
