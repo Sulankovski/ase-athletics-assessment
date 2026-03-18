@@ -25,6 +25,8 @@ import {
 import * as playerStatsRepo from "../repositories/player_stats.js";
 import * as playerAttributesRepo from "../repositories/player_attributes.js";
 import * as playerContractsRepo from "../repositories/player_contracts.js";
+import * as reportsRepo from "../repositories/reports.js";
+import { toReportResponse, validateReportCreate, parseReportForCreate } from "../models/report.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
 import { ValidationError } from "../exceptions/validation.js";
 
@@ -138,6 +140,27 @@ export async function getPlayerById(id, db) {
     throw new PlayerNotFoundError();
   }
   return enrichPlayer(row, db);
+}
+
+export async function getPlayerReports(playerId, db) {
+  const player = await findById(playerId, db);
+  if (!player) {
+    throw new PlayerNotFoundError();
+  }
+  const rows = await reportsRepo.findByPlayerId(playerId, db);
+  return { reports: rows.map(toReportResponse) };
+}
+
+export async function createPlayerReport(playerId, body, db) {
+  const player = await findById(playerId, db);
+  if (!player) {
+    throw new PlayerNotFoundError();
+  }
+  validateReportCreate(body);
+  const data = parseReportForCreate(body);
+  data.player_name = data.player_name || player.name;
+  const row = await reportsRepo.create(playerId, data, db);
+  return toReportResponse(row);
 }
 
 const DEFAULT_PAGE_SIZE = 25;

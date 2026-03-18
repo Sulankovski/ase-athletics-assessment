@@ -51,6 +51,24 @@ router.delete("/:id", async (req, res, next) => {
   }
 });
 
+router.get("/:id/reports", async (req, res, next) => {
+  try {
+    const result = await playersService.getPlayerReports(req.params.id, req.db);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:id/reports", async (req, res, next) => {
+  try {
+    const report = await playersService.createPlayerReport(req.params.id, req.body, req.db);
+    res.status(201).json(report);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
     const player = await playersService.getPlayerById(req.params.id, req.db);
