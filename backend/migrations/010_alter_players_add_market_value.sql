@@ -1,0 +1,2 @@
+ALTER TABLE players
+  ADD COLUMN IF NOT EXISTS market_value VARCHAR(50) DEFAULT 'N/A';

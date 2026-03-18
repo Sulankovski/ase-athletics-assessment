@@ -1,7 +1,7 @@
 export async function create(player, db) {
   const result = await db.query(
-    `INSERT INTO players (name, age, team, position, jersey_number, preferred_foot, height, weight, image_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    `INSERT INTO players (name, age, team, position, jersey_number, preferred_foot, height, weight, image_url, market_value)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
     [
       player.name,
       player.age,
@@ -12,6 +12,7 @@ export async function create(player, db) {
       player.height,
       player.weight,
       player.image_url,
+      player.market_value,
     ]
   );
   return result.rows[0];
@@ -26,6 +27,7 @@ const UPDATEABLE_COLUMNS = [
   "height",
   "weight",
   "image_url",
+  "market_value",
 ];
 
 export async function update(id, data, db) {
@@ -76,6 +78,7 @@ export const SEARCH_COLUMNS = [
   "height",
   "weight",
   "image_url",
+  "market_value",
 ];
 
 export async function searchByText(term, limit, offset, db) {

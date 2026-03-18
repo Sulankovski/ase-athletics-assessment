@@ -13,6 +13,7 @@ function normalizePlayerInput(data) {
     height: d.height ?? d.Height,
     weight: d.weight ?? d.Weight,
     image_url: d.image_url ?? d.imageUrl ?? d.ImageUrl,
+    market_value: d.market_value ?? d.marketValue ?? d.MarketValue,
   };
 }
 
@@ -26,6 +27,7 @@ const playerCreateSchema = Joi.object({
   height: Joi.string().trim().required(),
   weight: Joi.string().trim().required(),
   image_url: Joi.string().trim().required(),
+  market_value: Joi.string().trim().default("N/A"),
 });
 
 const UPDATEABLE_FIELDS = [
@@ -37,6 +39,7 @@ const UPDATEABLE_FIELDS = [
   { key: "height", aliases: ["height", "Height"] },
   { key: "weight", aliases: ["weight", "Weight"] },
   { key: "image_url", aliases: ["image_url", "imageUrl", "ImageUrl"] },
+  { key: "market_value", aliases: ["market_value", "marketValue", "MarketValue"] },
 ];
 
 function normalizePlayerUpdateInput(data) {
@@ -62,6 +65,7 @@ const playerUpdateSchema = Joi.object({
   height: Joi.string().trim(),
   weight: Joi.string().trim(),
   image_url: Joi.string().trim(),
+  market_value: Joi.string().trim(),
 }).min(1);
 
 const STATS_FIELD_MAP = [
@@ -241,6 +245,7 @@ export function toPlayerResponse(row, stats = null, attributes = null, contract 
     height: row.height,
     weight: row.weight,
     image_url: row.image_url,
+    market_value: row.market_value,
     created_at: row.created_at,
     updated_at: row.updated_at,
     stats: toPlayerStatsResponse(stats),
