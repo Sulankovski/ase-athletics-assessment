@@ -6,6 +6,7 @@ import { initDb } from "./utils/db_init.js";
 import { getDb } from "./middleware/database.js";
 import { router as authRouter } from "./controllers/auth.js";
 import { router as playersRouter } from "./controllers/players.js";
+import { router as dashboardRouter } from "./controllers/dashboard.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,8 +22,9 @@ app.get("/", (req, res) => {
   res.json({ message: "ASE Athletics API", status: "ok" });
 });
 
-app.use("/auth", getDb, authRouter);
-app.use("/players", getDb, playersRouter);
+app.use("/api/auth", getDb, authRouter);
+app.use("/api/players", getDb, playersRouter);
+app.use("/api/dashboard", getDb, dashboardRouter);
 
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode ?? 500;
