@@ -4,6 +4,7 @@ import { ArrowLeft, Ruler, Weight, Footprints, Hash } from 'lucide-react';
 import { Bar, Radar } from 'react-chartjs-2';
 import { formatSalary, formatShortDate, formatMarketValue } from '@/utils/format';
 import { chartColors } from '@/styles/designTokens';
+import PlayerEditPanel from '@/components/player/PlayerEditPanel';
 
 const OUTFIELD_ATTR_ORDER = [
   ['pace', 'Pace'],
@@ -111,7 +112,7 @@ const baseChartOptions = {
   },
 };
 
-export default function PlayerProfileView({ player }) {
+export default function PlayerProfileView({ player, isEditing, draft, setDraft }) {
   const attrs = player?.attributes ?? {};
   const stats = player?.stats ?? {};
   const contract = player?.contract ?? {};
@@ -229,6 +230,21 @@ export default function PlayerProfileView({ player }) {
     }),
     [],
   );
+
+  if (isEditing && draft) {
+    return (
+      <div className="w-full min-w-0 space-y-6 tablet:space-y-8">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-2 text-sm font-medium text-primary-700 hover:text-primary-800"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          Back to dashboard
+        </Link>
+        <PlayerEditPanel draft={draft} setDraft={setDraft} />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-w-0 space-y-8 tablet:space-y-10">
@@ -400,9 +416,6 @@ export default function PlayerProfileView({ player }) {
         </div>
 
         <div className="bg-white">
-          <p className="px-4 py-3 tablet:px-6 tablet:py-4 text-xs tablet:text-sm text-neutral-gray600 border-b border-neutral-gray100 leading-relaxed max-w-3xl">
-            Complete season statistics and attribute ratings in one place.
-          </p>
           <div className="grid desktop:grid-cols-2 desktop:divide-x divide-neutral-gray200">
           <div className="p-4 tablet:p-6 desktop:p-8">
             <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-4">
