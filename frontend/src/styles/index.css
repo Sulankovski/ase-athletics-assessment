@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GODDACK ANALITICA UI - Design System Base Styles */
+@layer base {
+  html {
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-neutral-gray50 text-neutral-gray900;
+    line-height: 1.5;
+  }
+}
+
+/* Component classes from ui_guidelines.json */
+@layer components {
+  /* Button variants */
+  .btn-primary {
+    @apply bg-primary-500 text-white px-6 py-3 rounded-md text-sm font-semibold;
+    @apply hover:bg-primary-600 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-100 text-secondary-700 px-6 py-3 rounded-md text-sm font-semibold;
+    @apply hover:bg-secondary-200 transition-colors;
+  }
+
+  .btn-danger {
+    @apply bg-accent-red text-white px-6 py-3 rounded-md text-sm font-semibold;
+    @apply hover:bg-red-600 transition-colors;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-lg shadow-base border border-neutral-gray200 p-6;
+  }
+
+  /* Input */
+  .input {
+    @apply bg-white border border-neutral-gray300 rounded-md px-4 py-3 text-sm;
+    @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 focus:outline-none;
+  }
+
+  /* Table */
+  .table-container {
+    @apply bg-white rounded-lg border border-neutral-gray200 overflow-hidden;
+  }
+
+  .table-header {
+    @apply bg-neutral-gray50 text-neutral-gray700 font-semibold px-4 py-3;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 border-b border-neutral-gray100;
+  }
+
+  /* Badges */
+  .badge-success {
+    @apply bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-warning {
+    @apply bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-error {
+    @apply bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  /* Layout */
+  .container-custom {
+    @apply max-w-[1200px] mx-auto px-4;
+  }
+
+  .sidebar {
+    @apply w-[250px] bg-secondary-800 text-white;
+  }
+
+  .header-bar {
+    @apply h-16 bg-white border-b border-neutral-gray200;
+  }
+}
