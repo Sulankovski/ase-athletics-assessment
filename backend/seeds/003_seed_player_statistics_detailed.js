@@ -202,8 +202,13 @@ async function seedPlayerStatisticsDetailed() {
     try {
       fs.accessSync(dataPath);
     } catch {
-      console.log(`Seed data not found: ${DATA_PATH}`);
-      return false;
+      dataPath = join(BACKEND_DIR, "data", "player_statistics_detailed.json");
+      try {
+        fs.accessSync(dataPath);
+      } catch {
+        console.log(`Seed data not found: ${DATA_PATH}`);
+        return false;
+      }
     }
 
     const raw = fs.readFileSync(dataPath, "utf-8");
