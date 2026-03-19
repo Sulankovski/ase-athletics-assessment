@@ -62,7 +62,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-10 large:mt-0 flex-1 w-full max-w-lg mx-auto large:max-w-none">
-            <div className="card shadow-lg border-primary-100/60 bg-white/80 backdrop-blur-sm">
+            <div className="card card-top-accent shadow-lg bg-white/80 backdrop-blur-sm">
               <p className="text-sm font-semibold text-neutral-gray800">Football analytics hub</p>
               <p className="mt-2 text-sm tablet:text-base text-neutral-gray600">
                 A dedicated analytics experience for football players - stats, trends, and reporting
@@ -90,7 +90,7 @@ export default function LandingPage() {
             {pillars.map(({ title, body, icon: Icon }) => (
               <div
                 key={title}
-                className="card flex flex-col h-full p-6 tablet:p-8 hover:shadow-md transition-shadow"
+                className="card card-top-accent flex flex-col h-full p-6 tablet:p-8 hover:shadow-md transition-shadow"
               >
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
                   <Icon className="h-5 w-5 tablet:h-6 tablet:w-6" aria-hidden />

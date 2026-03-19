@@ -21,13 +21,19 @@ export default function DashboardFilters({
     Object.keys(appliedSummary).length > 0;
 
   return (
-    <form
-      className="rounded-lg border border-neutral-gray200 bg-white p-3 tablet:p-4 shadow-sm"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onApply();
-      }}
-    >
+    <div className="rounded-lg overflow-hidden shadow-md border border-primary-800/25">
+      <div className="bg-gradient-to-br from-primary-700 to-primary-900 px-4 py-2.5 tablet:py-3">
+        <p className="text-[11px] tablet:text-xs font-bold uppercase tracking-wider text-white/90">
+          Filters
+        </p>
+      </div>
+      <form
+        className="bg-white p-3 tablet:p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onApply();
+        }}
+      >
       <div className="flex flex-col gap-3 tablet:flex-row tablet:flex-wrap tablet:items-end">
         <div className="min-w-0 flex-1 tablet:max-w-[220px]">
           <label htmlFor="dash-filter-team" className="block text-xs font-medium text-neutral-gray600 mb-1">
@@ -108,7 +114,7 @@ export default function DashboardFilters({
       </div>
 
       {hasActiveFilters && (
-        <p className="mt-3 text-xs text-neutral-500 leading-relaxed">
+        <p className="mt-3 text-xs text-primary-900/80 leading-relaxed rounded-md bg-primary-50/80 px-3 py-2 border border-primary-100">
           Active filters:{' '}
           {[
             appliedSummary.team != null &&
@@ -121,6 +127,7 @@ export default function DashboardFilters({
             .join(' · ') || '—'}
         </p>
       )}
-    </form>
+      </form>
+    </div>
   );
 }

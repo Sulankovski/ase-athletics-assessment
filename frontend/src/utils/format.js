@@ -24,3 +24,13 @@ export function formatShortDate(iso) {
     return iso;
   }
 }
+
+/** Compact display for market_value strings (e.g. euros / dollars in raw units). */
+export function formatMarketValue(value) {
+  if (value == null || value === '' || String(value).toUpperCase() === 'N/A') return '—';
+  const n = Number(String(value).replace(/[^\d.-]/g, ''));
+  if (!Number.isFinite(n)) return '—';
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toLocaleString()}`;
+}

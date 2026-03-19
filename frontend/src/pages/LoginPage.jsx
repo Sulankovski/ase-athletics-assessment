@@ -42,7 +42,7 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-1 items-center justify-center w-full min-w-0">
-          <div className="card w-full max-w-md shadow-lg border-neutral-gray200/80">
+          <div className="card card-top-accent w-full max-w-md shadow-lg">
             <h2 className="text-2xl font-semibold text-neutral-gray900">Log in</h2>
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               {error && (

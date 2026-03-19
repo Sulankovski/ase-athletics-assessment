@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Radar } from 'react-chartjs-2';
 import { formatSalary, formatAge, formatShortDate } from '@/utils/format';
 import { chartColors } from '@/styles/designTokens';
@@ -53,7 +54,29 @@ function aggregateAgeLeague(ageRows) {
   return acc;
 }
 
+function playerRowInteraction(row, navigate) {
+  const id = row?.id;
+  const name = row?.name ?? 'player';
+  if (id == null) return {};
+  return {
+    role: 'link',
+    tabIndex: 0,
+    'aria-label': `View profile for ${name}`,
+    onClick: () => navigate(`/players/${id}`),
+    onKeyDown: (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        navigate(`/players/${id}`);
+      }
+    },
+  };
+}
+
+const clickableRowClass =
+  'cursor-pointer hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 transition-colors';
+
 export default function DashboardView({ data }) {
+  const navigate = useNavigate();
   const summary = data?.summary ?? {};
   const top = data?.top_performers ?? {};
   const dist = data?.distributions ?? {};
@@ -226,7 +249,7 @@ export default function DashboardView({ data }) {
           Summary & on-pitch leaders
         </h3>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 large:grid-cols-5 gap-3 tablet:gap-4 desktop:gap-5">
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Total players
             </p>
@@ -234,7 +257,7 @@ export default function DashboardView({ data }) {
               {summary.total_players ?? '—'}
             </p>
           </div>
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Average age
             </p>
@@ -242,14 +265,20 @@ export default function DashboardView({ data }) {
               {formatAge(summary.average_age)}
             </p>
           </div>
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Top goals
             </p>
             {topGoal ? (
               <>
                 <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
-                  {topGoal.name}
+                  {topGoal.id != null ? (
+                    <Link to={`/players/${topGoal.id}`} className="hover:text-primary-700 underline-offset-2 hover:underline">
+                      {topGoal.name}
+                    </Link>
+                  ) : (
+                    topGoal.name
+                  )}
                 </p>
                 <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
                   {topGoal.team} · {topGoal.position}
@@ -262,14 +291,20 @@ export default function DashboardView({ data }) {
               <p className="mt-2 text-neutral-gray500">No data</p>
             )}
           </div>
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Top assists
             </p>
             {topAssist ? (
               <>
                 <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
-                  {topAssist.name}
+                  {topAssist.id != null ? (
+                    <Link to={`/players/${topAssist.id}`} className="hover:text-primary-700 underline-offset-2 hover:underline">
+                      {topAssist.name}
+                    </Link>
+                  ) : (
+                    topAssist.name
+                  )}
                 </p>
                 <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
                   {topAssist.team} · {topAssist.position}
@@ -282,14 +317,20 @@ export default function DashboardView({ data }) {
               <p className="mt-2 text-neutral-gray500">No data</p>
             )}
           </div>
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0 tablet:col-span-2 desktop:col-span-1 large:col-span-1">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 tablet:col-span-2 desktop:col-span-1 large:col-span-1">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Highest pace
             </p>
             {topPace ? (
               <>
                 <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
-                  {topPace.name}
+                  {topPace.id != null ? (
+                    <Link to={`/players/${topPace.id}`} className="hover:text-primary-700 underline-offset-2 hover:underline">
+                      {topPace.name}
+                    </Link>
+                  ) : (
+                    topPace.name
+                  )}
                 </p>
                 <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
                   {topPace.team} · {topPace.position}
@@ -308,7 +349,7 @@ export default function DashboardView({ data }) {
           Market insights
         </h3>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 desktop:grid-cols-2 gap-4 tablet:gap-5 desktop:gap-6 min-w-0">
-          <div className="table-container min-w-0">
+          <div className="dashboard-table-shell min-w-0">
             <div className="px-3 tablet:px-4 py-2.5 tablet:py-3 border-b border-neutral-gray200 bg-neutral-gray50">
               <h4 className="text-sm tablet:text-base font-semibold text-neutral-gray900">
                 Top salaries
@@ -318,16 +359,20 @@ export default function DashboardView({ data }) {
               <table className="w-full min-w-[280px] text-xs tablet:text-sm">
                 <thead>
                   <tr className="table-header border-b border-neutral-gray200">
-                    <th className="text-left font-semibold">Player</th>
-                    <th className="text-left font-semibold">Team</th>
-                    <th className="text-right font-semibold">Salary</th>
+                    <th className="text-center font-semibold py-2 px-4">Player</th>
+                    <th className="text-center font-semibold py-2 px-4">Team</th>
+                    <th className="text-center font-semibold py-2 px-4">Salary</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(top.salary || []).slice(0, 8).map((row) => (
-                    <tr key={`${row.id}-salary`} className="border-b border-neutral-gray100">
-                      <td className="py-2 px-4 font-medium text-neutral-gray900">{row.name}</td>
-                      <td className="py-2 px-4 text-neutral-gray600">{row.team}</td>
+                    <tr
+                      key={`${row.id}-salary`}
+                      className={`border-b border-neutral-gray100 ${row.id != null ? clickableRowClass : ''}`}
+                      {...playerRowInteraction(row, navigate)}
+                    >
+                      <td className="py-2 px-4 font-medium text-neutral-gray900 text-left">{row.name}</td>
+                      <td className="py-2 px-4 text-neutral-gray600 text-left">{row.team}</td>
                       <td className="py-2 px-4 text-right font-medium">{formatSalary(row.value)}</td>
                     </tr>
                   ))}
@@ -336,13 +381,23 @@ export default function DashboardView({ data }) {
             </div>
             {topSalary && (
               <p className="px-3 tablet:px-4 py-2.5 tablet:py-3 text-xs text-neutral-gray500 bg-neutral-gray50 leading-relaxed">
-                Highest earner: <span className="font-semibold text-neutral-gray800">{topSalary.name}</span>{' '}
+                Highest earner:{' '}
+                {topSalary.id != null ? (
+                  <Link
+                    to={`/players/${topSalary.id}`}
+                    className="font-semibold text-neutral-gray800 hover:text-primary-700 underline-offset-2 hover:underline"
+                  >
+                    {topSalary.name}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-neutral-gray800">{topSalary.name}</span>
+                )}{' '}
                 ({formatSalary(topSalary.value)})
               </p>
             )}
           </div>
 
-          <div className="table-container min-w-0">
+          <div className="dashboard-table-shell min-w-0">
             <div className="px-3 tablet:px-4 py-2.5 tablet:py-3 border-b border-neutral-gray200 bg-neutral-gray50">
               <h4 className="text-sm tablet:text-base font-semibold text-neutral-gray900">
                 Upcoming contract expirations
@@ -352,20 +407,24 @@ export default function DashboardView({ data }) {
               <table className="w-full min-w-[320px] text-xs tablet:text-sm">
                 <thead className="sticky top-0 bg-neutral-gray50 z-10">
                   <tr className="border-b border-neutral-gray200">
-                    <th className="text-left font-semibold py-2 px-4">Player</th>
-                    <th className="text-left font-semibold py-2 px-4">Team</th>
-                    <th className="text-left font-semibold py-2 px-4">Ends</th>
-                    <th className="text-right font-semibold py-2 px-4">Salary</th>
+                    <th className="text-center font-semibold py-2 px-4">Player</th>
+                    <th className="text-center font-semibold py-2 px-4">Team</th>
+                    <th className="text-center font-semibold py-2 px-4">Ends</th>
+                    <th className="text-center font-semibold py-2 px-4">Salary</th>
                   </tr>
                 </thead>
                 <tbody>
                   {contracts.map((row) => (
-                    <tr key={row.id} className="border-b border-neutral-gray100 hover:bg-neutral-gray50/80">
-                      <td className="py-2 px-4 font-medium text-neutral-gray900 whitespace-nowrap max-w-[140px] truncate">
+                    <tr
+                      key={row.id}
+                      className={`border-b border-neutral-gray100 ${row.id != null ? clickableRowClass : ''}`}
+                      {...playerRowInteraction(row, navigate)}
+                    >
+                      <td className="py-2 px-4 font-medium text-neutral-gray900 whitespace-nowrap max-w-[140px] truncate text-left">
                         {row.name}
                       </td>
-                      <td className="py-2 px-4 text-neutral-gray600">{row.team}</td>
-                      <td className="py-2 px-4 text-neutral-gray600 whitespace-nowrap">
+                      <td className="py-2 px-4 text-neutral-gray600 text-left">{row.team}</td>
+                      <td className="py-2 px-4 text-neutral-gray600 whitespace-nowrap text-left">
                         {formatShortDate(row.contract_end)}
                       </td>
                       <td className="py-2 px-4 text-right">{formatSalary(row.salary)}</td>
@@ -381,7 +440,7 @@ export default function DashboardView({ data }) {
           Team distributions
         </h3>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 desktop:grid-cols-2 gap-4 tablet:gap-5 desktop:gap-6 min-w-0">
-          <div className="table-container min-w-0">
+          <div className="dashboard-table-shell min-w-0">
             <div className="px-3 tablet:px-4 py-2.5 tablet:py-3 border-b border-neutral-gray200 bg-neutral-gray50">
               <h4 className="text-sm tablet:text-base font-semibold text-neutral-gray900">Players by team</h4>
             </div>
@@ -404,7 +463,7 @@ export default function DashboardView({ data }) {
               </table>
             </div>
           </div>
-          <div className="table-container min-w-0">
+          <div className="dashboard-table-shell min-w-0">
             <div className="px-3 tablet:px-4 py-2.5 tablet:py-3 border-b border-neutral-gray200 bg-neutral-gray50">
               <h4 className="text-sm tablet:text-base font-semibold text-neutral-gray900">
                 Players by position
@@ -444,13 +503,13 @@ export default function DashboardView({ data }) {
           Goals & assists by position
         </h3>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 desktop:grid-cols-2 gap-4 tablet:gap-5 desktop:gap-6 min-w-0">
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
             <h4 className="text-xs tablet:text-sm font-semibold text-neutral-gray800">Goals distribution</h4>
             <div className={chartSurface}>
               <Bar data={goalsBarData} options={barAxisOptions} />
             </div>
           </div>
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
             <h4 className="text-xs tablet:text-sm font-semibold text-neutral-gray800">
               Assists distribution
             </h4>
@@ -468,7 +527,7 @@ export default function DashboardView({ data }) {
           squads by player count.
         </p>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 large:grid-cols-2 gap-4 tablet:gap-5 desktop:gap-6 min-w-0">
-          <div className="card p-3 tablet:p-4 desktop:p-5 flex flex-col items-stretch min-w-0 overflow-hidden">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 flex flex-col items-stretch min-w-0 overflow-hidden">
             <h4 className="text-xs tablet:text-sm font-semibold text-neutral-gray800">League total</h4>
             <div className="h-[220px] tablet:h-[260px] desktop:h-[280px] w-full max-w-md mx-auto min-w-0 flex items-center justify-center">
               <Doughnut
@@ -487,7 +546,7 @@ export default function DashboardView({ data }) {
               />
             </div>
           </div>
-          <div className="card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
+          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
             <h4 className="text-xs tablet:text-sm font-semibold text-neutral-gray800 mb-3 tablet:mb-4">
               Top squads by headcount
             </h4>
@@ -544,7 +603,7 @@ export default function DashboardView({ data }) {
           <strong>passing</strong> (highest first). Tap a name to show or hide that profile on the
           chart (at least one player stays visible).
         </p>
-        <div className="mt-3 tablet:mt-4 card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
+        <div className="mt-3 tablet:mt-4 dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
           {sortedRadar.length > 0 && (
             <div
               className="mb-3 tablet:mb-4 flex flex-col gap-3 tablet:gap-4"

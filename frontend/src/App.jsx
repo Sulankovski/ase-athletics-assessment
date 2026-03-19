@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
+import PlayerProfilePage from './pages/PlayerProfilePage';
 
 function App() {
   return (
@@ -16,6 +17,14 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/players/:id"
+        element={
+          <ProtectedRoute>
+            <PlayerProfilePage />
           </ProtectedRoute>
         }
       />
