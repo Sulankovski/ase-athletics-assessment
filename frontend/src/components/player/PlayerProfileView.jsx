@@ -4,7 +4,7 @@ import { ArrowLeft, Ruler, Weight, Footprints, Hash } from 'lucide-react';
 import { Bar, Radar } from 'react-chartjs-2';
 import { formatSalary, formatShortDate, formatMarketValue } from '@/utils/format';
 import { chartColors } from '@/styles/designTokens';
-import PlayerEditPanel from '@/components/player/PlayerEditPanel';
+import PlayerEditAddPanel from '@/components/player/PlayerEditAddPanel';
 
 const OUTFIELD_ATTR_ORDER = [
   ['pace', 'Pace'],
@@ -241,7 +241,7 @@ export default function PlayerProfileView({ player, isEditing, draft, setDraft }
           <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
           Back to dashboard
         </Link>
-        <PlayerEditPanel draft={draft} setDraft={setDraft} />
+        <PlayerEditAddPanel mode="edit" draft={draft} setDraft={setDraft} />
       </div>
     );
   }

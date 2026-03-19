@@ -19,3 +19,8 @@ export function updatePlayer(id, body) {
 export function deletePlayer(id) {
   return api.delete(`/players/${playerPathSegment(id)}`);
 }
+
+/** Authenticated POST `/players` — create player (body per backend `validatePlayerCreate`). */
+export function createPlayer(body) {
+  return api.post('/players', body);
+}

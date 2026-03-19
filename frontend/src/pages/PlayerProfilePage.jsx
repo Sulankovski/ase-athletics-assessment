@@ -161,65 +161,73 @@ export default function PlayerProfilePage() {
   };
 
   return (
-    <PageLayout mainClassName="flex flex-col bg-neutral-gray50">
-      <div className="w-full max-w-none flex-1 min-w-0 px-4 tablet:px-6 desktop:px-8 xl:px-10 2xl:px-12 py-6 tablet:py-8 desktop:py-10">
-        <div className="min-w-0">
-          <p className="text-xs tablet:text-sm font-medium text-primary-700">Player profile</p>
-          <div className="mt-1 flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
-            <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight min-w-0 flex-1">
-              Detailed performance &amp; attributes
-            </h1>
-            {!loading && !error && player && (
-              <div className="flex flex-wrap items-center gap-2 shrink-0 tablet:pt-0.5">
-                {isEditing ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      disabled={saving}
-                      className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saving || !isDirty}
-                      title={!isDirty && !saving ? 'Change a field to save' : undefined}
-                      className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? 'Saving…' : 'Save'}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={startEdit} className="btn-primary py-2 px-4 text-sm">
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openDeleteModal}
-                      className="btn-danger py-2 px-4 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {loading && (
+    <PageLayout mainClassName="flex flex-col flex-1 min-h-0 bg-neutral-gray50">
+      <div className="w-full max-w-none flex flex-1 flex-col min-h-0 min-w-0 px-4 tablet:px-6 desktop:px-8 xl:px-10 2xl:px-12 py-6 tablet:py-8 desktop:py-10">
+        {loading ? (
           <div
-            className="mt-8 flex flex-col items-center justify-center gap-3 min-h-[40vh] text-sm text-neutral-gray600"
+            className="flex flex-1 flex-col items-center justify-center gap-8 min-h-0 py-8 px-4 text-center"
             role="status"
             aria-live="polite"
           >
-            <Loader2 className="h-8 w-8 animate-spin text-primary-600" aria-hidden />
-            <p>Loading player…</p>
+            <div className="max-w-2xl">
+              <p className="text-xs tablet:text-sm font-medium text-primary-700">Player profile</p>
+              <h1 className="mt-2 text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight">
+                Detailed performance &amp; attributes
+              </h1>
+            </div>
+            <div className="flex flex-col items-center gap-3 text-sm text-neutral-gray600">
+              <Loader2 className="h-8 w-8 shrink-0 animate-spin text-primary-600" aria-hidden />
+              <p>Loading player…</p>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            <div className="min-w-0 shrink-0">
+              <p className="text-xs tablet:text-sm font-medium text-primary-700">Player profile</p>
+              <div className="mt-1 flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
+                <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight min-w-0 flex-1">
+                  Detailed performance &amp; attributes
+                </h1>
+                {!error && player && (
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 tablet:pt-0.5">
+                    {isEditing ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          disabled={saving}
+                          className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSave}
+                          disabled={saving || !isDirty}
+                          title={!isDirty && !saving ? 'Change a field to save' : undefined}
+                          className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {saving ? 'Saving…' : 'Save'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" onClick={startEdit} className="btn-primary py-2 px-4 text-sm">
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openDeleteModal}
+                          className="btn-danger py-2 px-4 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
         {!loading && error && (
           <div
@@ -258,6 +266,8 @@ export default function PlayerProfilePage() {
               setDraft={setDraft}
             />
           </div>
+        )}
+          </>
         )}
 
         {deleteModalOpen && player && (

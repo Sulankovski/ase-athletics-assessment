@@ -146,6 +146,89 @@ function parseNumericField(key, raw) {
   return Number.isInteger(n) ? n : Math.round(n);
 }
 
+/** Empty form state for POST /players (required core fields + optional nested). */
+export function cloneEmptyPlayerForCreate() {
+  return {
+    name: '',
+    age: '',
+    team: '',
+    position: '',
+    jersey_number: '',
+    preferred_foot: '',
+    height: '',
+    weight: '',
+    image_url: '',
+    market_value: '',
+    stats: { ...emptyStatsRecord() },
+    attributes: { ...emptyAttrsRecord() },
+    contract: { salary: '', contract_end: '' },
+  };
+}
+
+/** Backend requires these strings (non-empty) on create. */
+export function isPlayerCreateDraftValid(draft) {
+  if (!draft) return false;
+  const required = [
+    'name',
+    'age',
+    'team',
+    'position',
+    'jersey_number',
+    'preferred_foot',
+    'height',
+    'weight',
+    'image_url',
+  ];
+  return required.every((k) => String(draft[k] ?? '').trim() !== '');
+}
+
+/** Build JSON body for POST /players. */
+export function buildPlayerCreatePayload(draft) {
+  const marketRaw = String(draft.market_value ?? '').trim();
+  const base = {
+    name: String(draft.name ?? '').trim(),
+    age: String(draft.age ?? '').trim(),
+    team: String(draft.team ?? '').trim(),
+    position: String(draft.position ?? '').trim(),
+    jersey_number: String(draft.jersey_number ?? '').trim(),
+    preferred_foot: String(draft.preferred_foot ?? '').trim(),
+    height: String(draft.height ?? '').trim(),
+    weight: String(draft.weight ?? '').trim(),
+    image_url: String(draft.image_url ?? '').trim(),
+    market_value: marketRaw || 'N/A',
+  };
+
+  const stats = {};
+  for (const key of STAT_EDIT_KEYS) {
+    const n = parseNumericField(key, draft.stats[key]);
+    if (n !== null) stats[key] = n;
+  }
+
+  const attributes = {};
+  for (const key of ATTR_EDIT_KEYS) {
+    const raw = draft.attributes[key];
+    if (raw === '' || raw == null) continue;
+    const n = Number(String(raw).trim());
+    if (!Number.isFinite(n)) continue;
+    attributes[key] = Math.round(n);
+  }
+
+  const contract = {};
+  const salRaw = draft.contract?.salary;
+  if (salRaw !== '' && salRaw != null) {
+    const n = Number(String(salRaw).trim());
+    if (Number.isFinite(n)) contract.salary = n;
+  }
+  const end = draft.contract?.contract_end?.trim();
+  if (end) contract.contract_end = end;
+
+  const payload = { ...base };
+  if (Object.keys(stats).length > 0) payload.stats = stats;
+  if (Object.keys(attributes).length > 0) payload.attributes = attributes;
+  if (Object.keys(contract).length > 0) payload.contract = contract;
+  return payload;
+}
+
 /** Build JSON body for PUT /players/:id. */
 export function buildPlayerUpdatePayload(draft) {
   const player = {};
