@@ -15,6 +15,10 @@ import {
   isPlayerCreateDraftValid,
 } from '@/utils/playerEdit';
 import { PLAYER_NAV_FROM_DASHBOARD } from '@/constants/navigation';
+import {
+  readDashboardStatsCache,
+  writeDashboardStatsCache,
+} from '@/utils/dashboardStatsCache';
 
 registerDashboardCharts();
 
@@ -64,22 +68,42 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const params = toQueryParams(appliedFilters);
+
+    const applyPayload = (payload) => {
+      if (cancelled) return;
+      setData(payload);
+      const af = payload?.applied_filters ?? {};
+      const narrowedByTeam = af.team != null && String(af.team).trim() !== '';
+      if (!narrowedByTeam && payload?.distributions?.by_team?.length) {
+        setTeamOptions(
+          [...payload.distributions.by_team]
+            .map((r) => r.team)
+            .sort((a, b) => a.localeCompare(b)),
+        );
+      }
+    };
+
+    // Fresh network when user explicitly refreshed (e.g. after creating a player).
+    if (statsRefreshNonce === 0) {
+      const cached = readDashboardStatsCache(params);
+      if (cached) {
+        setError(null);
+        applyPayload(cached);
+        setLoading(false);
+        return () => {
+          cancelled = true;
+        };
+      }
+    }
+
     setLoading(true);
     setError(null);
 
-    fetchDashboardStats(toQueryParams(appliedFilters))
+    fetchDashboardStats(params)
       .then((payload) => {
-        if (cancelled) return;
-        setData(payload);
-        const af = payload?.applied_filters ?? {};
-        const narrowedByTeam = af.team != null && String(af.team).trim() !== '';
-        if (!narrowedByTeam && payload?.distributions?.by_team?.length) {
-          setTeamOptions(
-            [...payload.distributions.by_team]
-              .map((r) => r.team)
-              .sort((a, b) => a.localeCompare(b)),
-          );
-        }
+        applyPayload(payload);
+        writeDashboardStatsCache(params, payload);
       })
       .catch((err) => {
         if (cancelled) return;
