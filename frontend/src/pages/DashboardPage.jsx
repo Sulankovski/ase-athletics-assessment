@@ -19,34 +19,20 @@ import {
   readDashboardStatsCache,
   writeDashboardStatsCache,
 } from '@/utils/dashboardStatsCache';
+import {
+  clearDashboardFiltersCache,
+  dashboardFiltersEffectivelyEqual,
+  dashboardFiltersToQueryParams,
+  EMPTY_DASHBOARD_FILTERS,
+  readDashboardFiltersCache,
+  writeDashboardFiltersCache,
+} from '@/utils/sessionFiltersCache';
 
 registerDashboardCharts();
 
-const emptyFilters = { team: '', age_min: '', age_max: '' };
-
-function toQueryParams(f) {
-  const p = {};
-  if (f.team?.trim()) p.team = f.team.trim();
-  if (f.age_min !== '' && f.age_min != null) {
-    const n = Number(f.age_min);
-    if (!Number.isNaN(n)) p.age_min = n;
-  }
-  if (f.age_max !== '' && f.age_max != null) {
-    const n = Number(f.age_max);
-    if (!Number.isNaN(n)) p.age_max = n;
-  }
-  return p;
-}
-
-/** Same effective API params → treat as no change (Apply disabled). */
-function filtersEffectivelyEqual(a, b) {
-  const pa = toQueryParams(a);
-  const pb = toQueryParams(b);
-  const keys = new Set([...Object.keys(pa), ...Object.keys(pb)]);
-  for (const k of keys) {
-    if (pa[k] !== pb[k]) return false;
-  }
-  return true;
+function initialDashboardFiltersState() {
+  const c = readDashboardFiltersCache();
+  return c ? { ...EMPTY_DASHBOARD_FILTERS, ...c } : { ...EMPTY_DASHBOARD_FILTERS };
 }
 
 export default function DashboardPage() {
@@ -55,8 +41,8 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filterForm, setFilterForm] = useState(emptyFilters);
-  const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
+  const [filterForm, setFilterForm] = useState(initialDashboardFiltersState);
+  const [appliedFilters, setAppliedFilters] = useState(initialDashboardFiltersState);
   const [teamOptions, setTeamOptions] = useState([]);
   const [statsRefreshNonce, setStatsRefreshNonce] = useState(0);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
@@ -67,8 +53,14 @@ export default function DashboardPage() {
   const dashActionsRef = useRef(null);
 
   useEffect(() => {
+    if (!dashboardFiltersEffectivelyEqual(appliedFilters, EMPTY_DASHBOARD_FILTERS)) {
+      writeDashboardFiltersCache(appliedFilters);
+    }
+  }, [appliedFilters]);
+
+  useEffect(() => {
     let cancelled = false;
-    const params = toQueryParams(appliedFilters);
+    const params = dashboardFiltersToQueryParams(appliedFilters);
 
     const applyPayload = (payload) => {
       if (cancelled) return;
@@ -196,24 +188,28 @@ export default function DashboardPage() {
   };
 
   const handleClearFilters = () => {
-    setFilterForm(emptyFilters);
-    setAppliedFilters(emptyFilters);
+    clearDashboardFiltersCache();
+    setFilterForm({ ...EMPTY_DASHBOARD_FILTERS });
+    setAppliedFilters({ ...EMPTY_DASHBOARD_FILTERS });
   };
 
   const handleRemoveDashboardFilterKey = (key) => {
     const next = { ...appliedFilters, [key]: '' };
+    if (dashboardFiltersEffectivelyEqual(next, EMPTY_DASHBOARD_FILTERS)) {
+      clearDashboardFiltersCache();
+    }
     setFilterForm(next);
     setAppliedFilters(next);
   };
 
   const appliedSummaryDisplay =
-    loading && Object.keys(toQueryParams(appliedFilters)).length > 0
-      ? toQueryParams(appliedFilters)
+    loading && Object.keys(dashboardFiltersToQueryParams(appliedFilters)).length > 0
+      ? dashboardFiltersToQueryParams(appliedFilters)
       : !loading && data?.applied_filters && Object.keys(data.applied_filters).length > 0
         ? data.applied_filters
         : null;
 
-  const canApplyFilters = !filtersEffectivelyEqual(filterForm, appliedFilters);
+  const canApplyFilters = !dashboardFiltersEffectivelyEqual(filterForm, appliedFilters);
 
   return (
     <PageLayout mainClassName="flex flex-col flex-1 min-h-0 bg-neutral-gray50">

@@ -18,6 +18,11 @@ import {
   browseFiltersToQueryParams,
   browseFiltersToSearchParams,
 } from '@/utils/playerBrowseFilters';
+import {
+  clearPlayersBrowseFiltersCache,
+  readPlayersBrowseFiltersCache,
+  writePlayersBrowseFiltersCache,
+} from '@/utils/sessionFiltersCache';
 import { PLAYER_NAV_FROM_PLAYERS_LIST } from '@/constants/navigation';
 
 const PAGE_SIZE = 25;
@@ -58,6 +63,22 @@ export default function PlayersListPage() {
   useEffect(() => {
     setFilterForm(browseFiltersFromSearchParams(searchParams));
   }, [searchParams]);
+
+  useEffect(() => {
+    if (browseFiltersEffectivelyEqual(appliedFilters, EMPTY_PLAYER_BROWSE_FILTERS)) {
+      return;
+    }
+    writePlayersBrowseFiltersCache(appliedFilters);
+  }, [appliedFilters]);
+
+  useEffect(() => {
+    if (!browseFiltersEffectivelyEqual(appliedFilters, EMPTY_PLAYER_BROWSE_FILTERS)) {
+      return;
+    }
+    const cached = readPlayersBrowseFiltersCache();
+    if (!cached) return;
+    setSearchParams(browseFiltersToSearchParams(cached, page), { replace: true });
+  }, [appliedFilters, page, setSearchParams]);
 
   const applyFiltersDisabled = browseFiltersEffectivelyEqual(filterForm, appliedFilters);
 
@@ -175,11 +196,15 @@ export default function PlayersListPage() {
   };
 
   const handleClearBrowseFilters = () => {
+    clearPlayersBrowseFiltersCache();
     setSearchParams(browseFiltersToSearchParams({ ...EMPTY_PLAYER_BROWSE_FILTERS }, 1));
   };
 
   const handleRemoveBrowseFilterKey = (key) => {
     const next = { ...appliedFilters, [key]: '' };
+    if (browseFiltersEffectivelyEqual(next, EMPTY_PLAYER_BROWSE_FILTERS)) {
+      clearPlayersBrowseFiltersCache();
+    }
     setSearchParams(browseFiltersToSearchParams(next, 1));
   };
 
