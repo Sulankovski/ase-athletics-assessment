@@ -1,4 +1,8 @@
 import {
+  PREFERRED_FOOT_OPTIONS,
+  preferredFootSelectValue,
+} from '@/constants/playerSearchFilters';
+import {
   PLAYER_EDIT_FIELDS,
   STAT_EDIT_KEYS,
   STAT_EDIT_LABELS,
@@ -43,18 +47,6 @@ const PROFILE_UNSIGNED_NUMBER_KEYS = new Set([
 
 const profileNumberInputClass =
   'input py-2 text-sm tabular-nums [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100';
-
-const PREFERRED_FOOT_OPTIONS = [
-  { value: 'left', label: 'Left' },
-  { value: 'right', label: 'Right' },
-];
-
-/** Maps draft value to `<select>` `value` (`left` / `right` only). */
-function preferredFootSelectValue(raw) {
-  const s = String(raw ?? '').trim().toLowerCase();
-  if (s === 'left' || s === 'right') return s;
-  return '';
-}
 
 function fieldGridClass(keysLength) {
   return keysLength > 12
