@@ -2,6 +2,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { login, clearError } from '@/store/slices/authSlice';
 import PageLayout from '@/components/layout/PageLayout';
+import MandatoryFieldsNote from '@/components/MandatoryFieldsNote';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
@@ -45,6 +46,7 @@ export default function LoginPage() {
           <div className="card card-top-accent w-full max-w-md shadow-lg">
             <h2 className="text-2xl font-semibold text-neutral-gray900">Log in</h2>
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <MandatoryFieldsNote />
               {error && (
                 <div
                   className="p-3 rounded-md bg-red-50 text-red-700 text-sm border border-red-100"
@@ -55,7 +57,7 @@ export default function LoginPage() {
               )}
               <div>
                 <label className="block text-sm font-medium text-neutral-gray700 mb-1" htmlFor="login-email">
-                  Email
+                  Email <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="login-email"
@@ -72,7 +74,7 @@ export default function LoginPage() {
                   className="block text-sm font-medium text-neutral-gray700 mb-1"
                   htmlFor="login-password"
                 >
-                  Password
+                  Password <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="login-password"

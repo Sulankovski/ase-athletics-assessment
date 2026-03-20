@@ -1,6 +1,14 @@
 import Joi from "joi";
 import { ValidationError } from "../exceptions/validation.js";
 
+function todayISODateLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function getVal(obj, keys) {
   for (const k of keys) {
     if (obj[k] !== undefined && obj[k] !== null) return obj[k];
@@ -46,17 +54,19 @@ export function parseReportForCreate(data) {
   };
 }
 
+const matchDetailsFullSchema = Joi.object({
+  opponent: Joi.string().trim().min(1).required(),
+  competition: Joi.string().trim().min(1).required(),
+  result: Joi.string().trim().min(1).required(),
+  position: Joi.string().trim().min(1).required(),
+  minutesPlayed: Joi.number().integer().min(0).required(),
+});
+
 const reportCreateSchema = Joi.object({
-  scoutName: Joi.string().trim().required(),
-  date: Joi.string().trim().required(),
+  scoutName: Joi.string().trim().min(1).required(),
+  date: Joi.string().trim().allow(""),
   playerName: Joi.string().trim(),
-  matchDetails: Joi.object({
-    opponent: Joi.string().trim(),
-    competition: Joi.string().trim(),
-    result: Joi.string().trim(),
-    minutesPlayed: Joi.number().integer().min(0),
-    position: Joi.string().trim(),
-  }),
+  matchDetails: matchDetailsFullSchema.required(),
   ratings: Joi.object({
     technical: Joi.number().integer().min(0).max(10),
     physical: Joi.number().integer().min(0).max(10),
@@ -95,8 +105,11 @@ export function validateReportCreate(data) {
   if (error) {
     throw new ValidationError(error.details[0].message);
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value.date || "").trim())) {
-    throw new ValidationError("date must be in YYYY-MM-DD format");
+  const ds = String(value.date || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) {
+    value.date = ds;
+  } else {
+    value.date = todayISODateLocal();
   }
   return value;
 }
@@ -194,6 +207,18 @@ export function validateReportUpdate(data) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value.date).trim())) {
       throw new ValidationError("date must be in YYYY-MM-DD format");
     }
+  }
+  if (value.matchDetails !== undefined) {
+    const md = { ...value.matchDetails };
+    if (md.minutesPlayed === undefined && md.minutes_played !== undefined) {
+      md.minutesPlayed = md.minutes_played;
+    }
+    delete md.minutes_played;
+    const { error: mdErr } = matchDetailsFullSchema.validate(md, { stripUnknown: true });
+    if (mdErr) {
+      throw new ValidationError(mdErr.details[0].message);
+    }
+    value.matchDetails = md;
   }
   return value;
 }

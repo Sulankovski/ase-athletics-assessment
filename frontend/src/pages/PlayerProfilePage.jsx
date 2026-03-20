@@ -4,8 +4,10 @@ import { ArrowLeft, Loader2, Menu } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PlayerProfileView from '@/components/player/PlayerProfileView';
 import { registerDashboardCharts } from '@/components/dashboard/registerCharts';
-import { deletePlayer, fetchPlayerById, updatePlayer } from '@/services/playerService';
+import { createPlayerReport, deletePlayer, fetchPlayerById, updatePlayer } from '@/services/playerService';
 import { clonePlayerForEdit, buildPlayerUpdatePayload } from '@/utils/playerEdit';
+import { cloneEmptyReportForCreate, buildReportCreatePayload, isReportCreateDraftValid } from '@/utils/reportEdit';
+import ReportEditAddPanel from '@/components/player/ReportEditAddPanel';
 import { useComparePlayers } from '@/context/ComparePlayersContext';
 
 registerDashboardCharts();
@@ -41,6 +43,11 @@ export default function PlayerProfilePage() {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const [addReportModalOpen, setAddReportModalOpen] = useState(false);
+  const [addReportDraft, setAddReportDraft] = useState(null);
+  const [addReportSaving, setAddReportSaving] = useState(false);
+  const [addReportError, setAddReportError] = useState(null);
+  const [reportsRefreshTrigger, setReportsRefreshTrigger] = useState(0);
   const performanceTitleRef = useRef(null);
   const [performanceTitleWraps, setPerformanceTitleWraps] = useState(false);
   const [profileActionsOpen, setProfileActionsOpen] = useState(false);
@@ -174,8 +181,21 @@ export default function PlayerProfilePage() {
   }, [loading]);
 
   useEffect(() => {
-    if (deleteModalOpen) setProfileActionsOpen(false);
-  }, [deleteModalOpen]);
+    if (deleteModalOpen || addReportModalOpen) setProfileActionsOpen(false);
+  }, [deleteModalOpen, addReportModalOpen]);
+
+  useEffect(() => {
+    if (!addReportModalOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !addReportSaving) {
+        setAddReportModalOpen(false);
+        setAddReportDraft(null);
+        setAddReportError(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [addReportModalOpen, addReportSaving]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -196,6 +216,49 @@ export default function PlayerProfilePage() {
   const cancelEdit = () => {
     setIsEditing(false);
     setSaveError(null);
+  };
+
+  const openAddReportModal = () => {
+    if (!player) return;
+    setAddReportDraft(cloneEmptyReportForCreate(player.name));
+    setAddReportError(null);
+    setAddReportModalOpen(true);
+    setProfileActionsOpen(false);
+  };
+
+  const closeAddReportModal = () => {
+    if (addReportSaving) return;
+    setAddReportModalOpen(false);
+    setAddReportDraft(null);
+    setAddReportError(null);
+  };
+
+  const handleSaveNewReport = async () => {
+    if (!addReportDraft || id == null) return;
+    if (!isReportCreateDraftValid(addReportDraft)) {
+      setAddReportError(
+        'Scout name, date (YYYY-MM-DD), and all match fields (opponent, competition, result, minutes, position) are required.'
+      );
+      return;
+    }
+    setAddReportSaving(true);
+    setAddReportError(null);
+    try {
+      await createPlayerReport(id, buildReportCreatePayload(addReportDraft));
+      setAddReportModalOpen(false);
+      setAddReportDraft(null);
+      setReportsRefreshTrigger((t) => t + 1);
+    } catch (err) {
+      const detail = err?.data?.detail;
+      let msg = err?.data?.message || err?.message || 'Could not create report';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d) => d?.message ?? d).join('; ');
+      }
+      setAddReportError(msg);
+    } finally {
+      setAddReportSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -248,6 +311,7 @@ export default function PlayerProfilePage() {
                     aria-hidden="true"
                   >
                     <div className="hidden lg:flex flex-wrap items-center justify-end gap-2">
+                      <span className="btn-primary py-2 px-4 text-sm">Add report</span>
                       <span className="btn-primary py-2 px-4 text-sm">Compare</span>
                       <span className="btn-primary py-2 px-4 text-sm">Edit</span>
                       <span className="btn-danger py-2 px-4 text-sm">Delete</span>
@@ -309,6 +373,13 @@ export default function PlayerProfilePage() {
                           </>
                         ) : (
                           <>
+                            <button
+                              type="button"
+                              onClick={openAddReportModal}
+                              className="btn-primary py-2 px-4 text-sm"
+                            >
+                              Add report
+                            </button>
                             {!playerInCompareList && (
                               <button
                                 type="button"
@@ -377,6 +448,16 @@ export default function PlayerProfilePage() {
                       </>
                     ) : (
                       <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileActionsOpen(false);
+                            openAddReportModal();
+                          }}
+                          className="btn-primary w-full justify-center py-2 px-4 text-sm"
+                        >
+                          Add report
+                        </button>
                         {!playerInCompareList && (
                           <button
                             type="button"
@@ -451,10 +532,82 @@ export default function PlayerProfilePage() {
               isEditing={isEditing}
               draft={draft}
               setDraft={setDraft}
+              reportsRefreshTrigger={reportsRefreshTrigger}
             />
           </div>
         )}
           </>
+        )}
+
+        {addReportModalOpen && player && addReportDraft && (
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-report-title"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/50"
+              aria-label="Dismiss"
+              onClick={closeAddReportModal}
+              disabled={addReportSaving}
+            />
+            <div
+              className="relative flex max-h-[min(92vh,900px)] w-full max-w-3xl flex-col rounded-lg border border-neutral-gray200 bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="shrink-0 border-b border-neutral-gray100 bg-gradient-to-br from-primary-700 to-primary-900 px-4 py-3 tablet:px-5">
+                <h2
+                  id="add-report-title"
+                  className="text-base tablet:text-lg font-bold text-white"
+                >
+                  Add report
+                </h2>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 tablet:px-6">
+                <ReportEditAddPanel
+                  mode="create"
+                  variant="plain"
+                  draft={addReportDraft}
+                  setDraft={setAddReportDraft}
+                />
+              </div>
+              <div className="shrink-0 space-y-2 border-t border-neutral-gray100 bg-neutral-gray50 px-4 py-3 tablet:px-5">
+                {addReportError ? (
+                  <p className="text-sm text-red-700" role="alert">
+                    {addReportError}
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeAddReportModal}
+                    disabled={addReportSaving}
+                    className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveNewReport}
+                    disabled={
+                      addReportSaving ||
+                      !isReportCreateDraftValid(addReportDraft)
+                    }
+                    title={
+                      !isReportCreateDraftValid(addReportDraft) && !addReportSaving
+                        ? 'Enter scout, date, and all match fields'
+                        : undefined
+                    }
+                    className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {addReportSaving ? 'Saving…' : 'Save report'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {deleteModalOpen && player && (

@@ -5,6 +5,7 @@ import {
   ATTR_EDIT_KEYS,
   ATTR_EDIT_LABELS,
 } from '@/utils/playerEdit';
+import MandatoryFieldsNote from '@/components/MandatoryFieldsNote';
 
 function fieldGridClass(keysLength) {
   return keysLength > 12
@@ -52,6 +53,7 @@ export default function PlayerEditAddPanel({ mode = 'edit', draft, setDraft }) {
         </p>
       </div>
       <div className="bg-white p-4 tablet:p-6 space-y-8 max-h-[min(70vh,720px)] overflow-y-auto">
+        {isCreate ? <MandatoryFieldsNote className="mb-2" /> : null}
         <div>
           {isCreate ? (
             <>
@@ -80,14 +82,7 @@ export default function PlayerEditAddPanel({ mode = 'edit', draft, setDraft }) {
         </div>
 
         <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-3">
-            Profile{' '}
-            {isCreate && (
-              <span className="font-normal text-neutral-gray500 normal-case tracking-normal">
-                (required <span className="text-red-600 font-semibold">*</span>)
-              </span>
-            )}
-          </h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-3">Profile</h3>
           <div className={fieldGridClass(PLAYER_EDIT_FIELDS.length)}>
             {PLAYER_EDIT_FIELDS.map(([key, label]) => (
               <div key={key} className="min-w-0">

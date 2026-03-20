@@ -1,9 +1,17 @@
-import { useMemo } from 'react';
-import { Ruler, Weight, Footprints, Hash } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Ruler, Weight, Footprints, Hash, ChevronRight, Loader2 } from 'lucide-react';
 import { Bar, Radar } from 'react-chartjs-2';
 import { formatSalary, formatShortDate, formatMarketValue } from '@/utils/format';
+import { fetchPlayerReports, updatePlayerReport } from '@/services/playerService';
+import {
+  cloneReportForEdit,
+  buildReportUpdatePayload,
+  isReportDraftValidForSave,
+  REPORT_RATING_EDIT_ROWS,
+} from '@/utils/reportEdit';
 import { chartColors } from '@/styles/designTokens';
 import PlayerEditAddPanel from '@/components/player/PlayerEditAddPanel';
+import ReportEditAddPanel from '@/components/player/ReportEditAddPanel';
 
 const OUTFIELD_ATTR_ORDER = [
   ['pace', 'Pace'],
@@ -97,6 +105,39 @@ function formatAttrCell(raw) {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
+function displayReportText(val) {
+  if (val == null || val === '') return '—';
+  return String(val);
+}
+
+function reportSummaryFragments(report) {
+  const parts = [];
+  if (report?.date) parts.push(formatShortDate(report.date));
+  const opp = report?.matchDetails?.opponent;
+  if (opp) parts.push(`vs ${opp}`);
+  if (report?.overallRating != null && report.overallRating !== '') {
+    const n = Number(report.overallRating);
+    parts.push(Number.isFinite(n) ? `Overall ${n}/10` : `Overall ${report.overallRating}`);
+  }
+  return parts;
+}
+
+/** Bordered card for expanded scout report sections */
+const reportDetailCard =
+  'rounded-lg border border-neutral-gray200 bg-white px-4 py-4 tablet:px-5 tablet:py-5 shadow-sm';
+
+const reportSectionHeading =
+  'text-[11px] tablet:text-xs font-bold uppercase tracking-wider text-primary-700 mb-3';
+
+function ReportMatchField({ label, children }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-medium text-neutral-gray500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-neutral-gray900 leading-snug break-words">{children}</p>
+    </div>
+  );
+}
+
 const chartSurface =
   'h-[240px] tablet:h-[280px] lg:h-[300px] xl:h-[320px] w-full min-h-[220px] min-w-0';
 
@@ -111,7 +152,24 @@ const baseChartOptions = {
   },
 };
 
-export default function PlayerProfileView({ player, isEditing, draft, setDraft }) {
+export default function PlayerProfileView({ player, isEditing, draft, setDraft, reportsRefreshTrigger = 0 }) {
+  const [fullMetricsOpen, setFullMetricsOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState(null);
+  const [openReportDetails, setOpenReportDetails] = useState({});
+  const [editingReportId, setEditingReportId] = useState(null);
+  const [reportDraft, setReportDraft] = useState(null);
+  const [reportEditBaseline, setReportEditBaseline] = useState(null);
+  const [reportSaveError, setReportSaveError] = useState(null);
+  const [reportSaving, setReportSaving] = useState(false);
+
+  const reportIsDirty = useMemo(() => {
+    if (!reportDraft || !reportEditBaseline) return false;
+    return JSON.stringify(reportDraft) !== JSON.stringify(reportEditBaseline);
+  }, [reportDraft, reportEditBaseline]);
+
   const attrs = player?.attributes ?? {};
   const stats = player?.stats ?? {};
   const contract = player?.contract ?? {};
@@ -229,6 +287,91 @@ export default function PlayerProfileView({ player, isEditing, draft, setDraft }
     }),
     [],
   );
+
+  useEffect(() => {
+    setReports([]);
+    setReportsError(null);
+    setOpenReportDetails({});
+    setEditingReportId(null);
+    setReportDraft(null);
+    setReportEditBaseline(null);
+    setReportSaveError(null);
+  }, [player?.id]);
+
+  const cancelReportEdit = () => {
+    setEditingReportId(null);
+    setReportDraft(null);
+    setReportEditBaseline(null);
+    setReportSaveError(null);
+  };
+
+  const beginReportEdit = (rid) => {
+    const r = reports.find((x) => x.id === rid);
+    if (!r) return;
+    const d = cloneReportForEdit(r);
+    setEditingReportId(rid);
+    setReportDraft(d);
+    setReportEditBaseline(JSON.parse(JSON.stringify(d)));
+    setReportSaveError(null);
+    setOpenReportDetails((prev) => ({ ...prev, [rid]: true }));
+  };
+
+  const saveReportEdit = async (rid) => {
+    if (!player?.id || !reportDraft || editingReportId !== rid) return;
+    if (!isReportDraftValidForSave(reportDraft)) {
+      setReportSaveError(
+        'Scout name, date, and all match fields (opponent, competition, result, minutes, position) are required.'
+      );
+      return;
+    }
+    setReportSaving(true);
+    setReportSaveError(null);
+    try {
+      const payload = buildReportUpdatePayload(reportDraft);
+      const updated = await updatePlayerReport(player.id, rid, payload);
+      setReports((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+      cancelReportEdit();
+    } catch (err) {
+      const detail = err?.data?.detail;
+      let msg = err?.data?.message || err?.message || 'Could not save report';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((x) => x?.message ?? x).join('; ');
+      }
+      setReportSaveError(msg);
+    } finally {
+      setReportSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!reportsOpen) {
+      setEditingReportId(null);
+      setReportDraft(null);
+      setReportEditBaseline(null);
+      setReportSaveError(null);
+    }
+  }, [reportsOpen]);
+
+  useEffect(() => {
+    if (!reportsOpen || !player?.id) return undefined;
+    let cancelled = false;
+    setReportsLoading(true);
+    setReportsError(null);
+    fetchPlayerReports(player.id)
+      .then((data) => {
+        if (!cancelled) setReports(Array.isArray(data?.reports) ? data.reports : []);
+      })
+      .catch((err) => {
+        if (!cancelled) setReportsError(err);
+      })
+      .finally(() => {
+        if (!cancelled) setReportsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reportsOpen, player?.id, reportsRefreshTrigger]);
 
   if (isEditing && draft) {
     return (
@@ -391,73 +534,365 @@ export default function PlayerProfileView({ player, isEditing, draft, setDraft }
         aria-labelledby="all-metrics-heading"
       >
         <div className="bg-gradient-to-br from-primary-700 to-primary-900 px-4 py-2.5 tablet:py-3">
-          <p
+          <button
+            type="button"
             id="all-metrics-heading"
-            className="text-[11px] tablet:text-xs font-bold uppercase tracking-wider text-white/90"
+            onClick={() => setFullMetricsOpen((o) => !o)}
+            aria-expanded={fullMetricsOpen}
+            aria-controls="full-metrics-panel"
+            className="group flex w-full min-w-0 items-center justify-between gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-sm"
           >
-            Full metrics
-          </p>
+            <span className="text-[11px] tablet:text-xs font-bold uppercase tracking-wider text-white/90 group-hover:text-white">
+              Full metrics
+            </span>
+            <ChevronRight
+              className={`h-5 w-5 shrink-0 text-white/90 transition-transform duration-200 group-hover:text-white ${fullMetricsOpen ? 'rotate-90' : ''}`}
+              aria-hidden
+            />
+          </button>
         </div>
 
-        <div className="bg-white">
-          <div className="grid desktop:grid-cols-2 desktop:divide-x divide-neutral-gray200">
-          <div className="p-4 tablet:p-6 desktop:p-8">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-4">
-              Statistics
-            </h3>
-            <div className="rounded-lg border border-neutral-gray100 overflow-hidden">
-              <table className="w-full text-xs tablet:text-sm">
-                <tbody>
-                  {STAT_ROWS.map(([key, label], i) => (
-                    <tr
-                      key={key}
-                      className={`border-b border-neutral-gray100 last:border-b-0 ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-gray50/50'}`}
-                    >
-                      <th
-                        scope="row"
-                        className="py-2.5 px-3 tablet:px-4 text-left font-medium text-neutral-gray700"
-                      >
-                        {label}
-                      </th>
-                      <td className="py-2.5 px-3 tablet:px-4 text-right font-semibold text-neutral-gray900 tabular-nums">
-                        {formatStatCell(key, stats[key])}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        {fullMetricsOpen ? (
+          <div
+            id="full-metrics-panel"
+            role="region"
+            aria-labelledby="all-metrics-heading"
+            className="bg-white"
+          >
+            <div className="grid desktop:grid-cols-2 desktop:divide-x divide-neutral-gray200">
+              <div className="p-4 tablet:p-6 desktop:p-8">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-4">
+                  Statistics
+                </h3>
+                <div className="rounded-lg border border-neutral-gray100 overflow-hidden">
+                  <table className="w-full text-xs tablet:text-sm">
+                    <tbody>
+                      {STAT_ROWS.map(([key, label], i) => (
+                        <tr
+                          key={key}
+                          className={`border-b border-neutral-gray100 last:border-b-0 ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-gray50/50'}`}
+                        >
+                          <th
+                            scope="row"
+                            className="py-2.5 px-3 tablet:px-4 text-left font-medium text-neutral-gray700"
+                          >
+                            {label}
+                          </th>
+                          <td className="py-2.5 px-3 tablet:px-4 text-right font-semibold text-neutral-gray900 tabular-nums">
+                            {formatStatCell(key, stats[key])}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-          <div className="p-4 tablet:p-6 desktop:p-8 border-t desktop:border-t-0 border-neutral-gray200">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-4">
-              Attributes
-            </h3>
-            <div className="rounded-lg border border-neutral-gray100 overflow-hidden">
-              <table className="w-full text-xs tablet:text-sm">
-                <tbody>
-                  {ALL_ATTR_ROWS.map(([key, label], i) => (
-                    <tr
-                      key={key}
-                      className={`border-b border-neutral-gray100 last:border-b-0 ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-gray50/50'}`}
-                    >
-                      <th
-                        scope="row"
-                        className="py-2.5 px-3 tablet:px-4 text-left font-medium text-neutral-gray700"
-                      >
-                        {label}
-                      </th>
-                      <td className="py-2.5 px-3 tablet:px-4 text-right font-semibold text-neutral-gray900 tabular-nums">
-                        {formatAttrCell(attrs[key])}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="p-4 tablet:p-6 desktop:p-8 border-t desktop:border-t-0 border-neutral-gray200">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-primary-700 mb-4">
+                  Attributes
+                </h3>
+                <div className="rounded-lg border border-neutral-gray100 overflow-hidden">
+                  <table className="w-full text-xs tablet:text-sm">
+                    <tbody>
+                      {ALL_ATTR_ROWS.map(([key, label], i) => (
+                        <tr
+                          key={key}
+                          className={`border-b border-neutral-gray100 last:border-b-0 ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-gray50/50'}`}
+                        >
+                          <th
+                            scope="row"
+                            className="py-2.5 px-3 tablet:px-4 text-left font-medium text-neutral-gray700"
+                          >
+                            {label}
+                          </th>
+                          <td className="py-2.5 px-3 tablet:px-4 text-right font-semibold text-neutral-gray900 tabular-nums">
+                            {formatAttrCell(attrs[key])}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
-          </div>
+        ) : null}
+      </section>
+
+      <section
+        className="min-w-0 rounded-lg overflow-hidden shadow-md border border-primary-800/25"
+        aria-labelledby="reports-section-heading"
+      >
+        <div className="bg-gradient-to-br from-primary-700 to-primary-900 px-4 py-2.5 tablet:py-3">
+          <button
+            type="button"
+            id="reports-section-heading"
+            onClick={() => setReportsOpen((o) => !o)}
+            aria-expanded={reportsOpen}
+            aria-controls="reports-panel"
+            className="group flex w-full min-w-0 items-center justify-between gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-sm"
+          >
+            <span className="text-[11px] tablet:text-xs font-bold uppercase tracking-wider text-white/90 group-hover:text-white">
+              Reports
+            </span>
+            <ChevronRight
+              className={`h-5 w-5 shrink-0 text-white/90 transition-transform duration-200 group-hover:text-white ${reportsOpen ? 'rotate-90' : ''}`}
+              aria-hidden
+            />
+          </button>
         </div>
+
+        {reportsOpen ? (
+          <div
+            id="reports-panel"
+            role="region"
+            aria-labelledby="reports-section-heading"
+            className="bg-white px-4 py-5 tablet:px-6 tablet:py-6"
+          >
+            {reportsLoading ? (
+              <div
+                className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-neutral-gray600"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2 className="h-7 w-7 shrink-0 animate-spin text-primary-600" aria-hidden />
+                <p>Loading reports…</p>
+              </div>
+            ) : reportsError ? (
+              <div
+                className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                role="alert"
+              >
+                <p className="font-semibold">Could not load reports</p>
+                <p className="mt-1">{reportsError.message}</p>
+              </div>
+            ) : reports.length === 0 ? (
+              <p className="py-8 text-center text-sm text-neutral-gray500">No scout reports for this player yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {reports.map((report) => {
+                  const rid = report.id;
+                  const expanded = !!openReportDetails[rid];
+                  const summaryBits = reportSummaryFragments(report);
+                  const m = report.matchDetails ?? {};
+                  const ratings = report.ratings ?? {};
+                  return (
+                    <li
+                      key={rid}
+                      className="rounded-lg border border-neutral-gray200 bg-neutral-gray50/40 overflow-hidden"
+                    >
+                      <div className="flex min-w-0 items-stretch">
+                        <button
+                          type="button"
+                          disabled={editingReportId === rid}
+                          onClick={() =>
+                            setOpenReportDetails((prev) => ({ ...prev, [rid]: !prev[rid] }))
+                          }
+                          aria-expanded={expanded}
+                          aria-controls={`report-detail-${rid}`}
+                          id={`report-toggle-${rid}`}
+                          className="group flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-3 tablet:px-4 text-left transition-colors hover:bg-neutral-gray50/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-neutral-gray900">
+                              Report by{' '}
+                              <span className="text-primary-800">{displayReportText(report.scoutName)}</span>
+                            </p>
+                            {summaryBits.length > 0 ? (
+                              <p className="mt-0.5 text-xs text-neutral-gray600">{summaryBits.join(' · ')}</p>
+                            ) : null}
+                          </div>
+                          <ChevronRight
+                            className={`h-5 w-5 shrink-0 text-neutral-gray500 transition-transform duration-200 group-hover:text-neutral-gray700 ${expanded ? 'rotate-90' : ''}`}
+                            aria-hidden
+                          />
+                        </button>
+                        {editingReportId === rid ? (
+                          <div className="flex shrink-0 items-center gap-2 border-l border-neutral-gray200/90 bg-white/60 px-2 py-2 tablet:px-3">
+                            <button
+                              type="button"
+                              onClick={cancelReportEdit}
+                              disabled={reportSaving}
+                              className="btn-secondary py-1.5 px-3 text-sm whitespace-nowrap disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => saveReportEdit(rid)}
+                              disabled={
+                                reportSaving ||
+                                !reportIsDirty ||
+                                !isReportDraftValidForSave(reportDraft)
+                              }
+                              title={
+                                reportSaving
+                                  ? undefined
+                                  : !reportIsDirty
+                                    ? 'Change a field to save'
+                                    : !isReportDraftValidForSave(reportDraft)
+                                      ? 'Fill scout, date, and all match fields'
+                                      : undefined
+                              }
+                              className="btn-primary py-1.5 px-3 text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {reportSaving ? 'Saving…' : 'Save'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex shrink-0 items-center border-l border-neutral-gray200/90 bg-white/60 px-2 py-2 tablet:px-3">
+                            <button
+                              type="button"
+                              onClick={() => beginReportEdit(rid)}
+                              className="btn-primary py-1.5 px-3 text-sm whitespace-nowrap"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {expanded ? (
+                        <div
+                          id={`report-detail-${rid}`}
+                          role="region"
+                          aria-labelledby={`report-toggle-${rid}`}
+                          className="border-t border-neutral-gray200 bg-neutral-gray50/70 px-3 py-4 tablet:px-4 tablet:py-5 space-y-4"
+                        >
+                          {reportSaveError && editingReportId === rid ? (
+                            <div
+                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                              role="alert"
+                            >
+                              {reportSaveError}
+                            </div>
+                          ) : null}
+                          {editingReportId === rid && reportDraft ? (
+                            <ReportEditAddPanel mode="edit" draft={reportDraft} setDraft={setReportDraft} />
+                          ) : (
+                            <>
+                          <div className={reportDetailCard}>
+                            <h4 className={reportSectionHeading}>Match</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                              <ReportMatchField label="Opponent">
+                                {displayReportText(m.opponent)}
+                              </ReportMatchField>
+                              <ReportMatchField label="Competition">
+                                {displayReportText(m.competition)}
+                              </ReportMatchField>
+                              <ReportMatchField label="Result">
+                                {displayReportText(m.result)}
+                              </ReportMatchField>
+                              <ReportMatchField label="Minutes">
+                                {m.minutesPlayed != null && m.minutesPlayed !== '' ? m.minutesPlayed : '—'}
+                              </ReportMatchField>
+                              <ReportMatchField label="Position">
+                                {displayReportText(m.position)}
+                              </ReportMatchField>
+                            </div>
+                          </div>
+
+                          <div className={reportDetailCard}>
+                            <h4 className={reportSectionHeading}>Ratings (0–10)</h4>
+                            <div className="rounded-md border border-neutral-gray100 overflow-hidden bg-neutral-gray50/30">
+                              <table className="w-full text-xs tablet:text-sm">
+                                <tbody>
+                                  {REPORT_RATING_EDIT_ROWS.map(([key, label], i) => (
+                                    <tr
+                                      key={key}
+                                      className={`border-b border-neutral-gray100 last:border-b-0 ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-gray50/40'}`}
+                                    >
+                                      <th
+                                        scope="row"
+                                        className="py-2.5 px-3 tablet:px-4 text-left font-medium text-neutral-gray700"
+                                      >
+                                        {label}
+                                      </th>
+                                      <td className="py-2.5 px-3 tablet:px-4 text-right font-semibold text-neutral-gray900 tabular-nums">
+                                        {ratings[key] != null && ratings[key] !== ''
+                                          ? ratings[key]
+                                          : '—'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 tablet:grid-cols-2">
+                            <div className={reportDetailCard}>
+                              <h4 className={reportSectionHeading}>Strengths</h4>
+                              {(report.strengths?.length ?? 0) > 0 ? (
+                                <ul className="list-disc pl-5 text-xs tablet:text-sm text-neutral-gray800 space-y-1.5 marker:text-primary-600">
+                                  {report.strengths.map((s, idx) => (
+                                    <li key={idx}>{s}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-xs text-neutral-gray500">—</p>
+                              )}
+                            </div>
+                            <div className={reportDetailCard}>
+                              <h4 className={reportSectionHeading}>Weaknesses</h4>
+                              {(report.weaknesses?.length ?? 0) > 0 ? (
+                                <ul className="list-disc pl-5 text-xs tablet:text-sm text-neutral-gray800 space-y-1.5 marker:text-primary-600">
+                                  {report.weaknesses.map((s, idx) => (
+                                    <li key={idx}>{s}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-xs text-neutral-gray500">—</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className={reportDetailCard}>
+                            <h4 className={reportSectionHeading}>Key moments</h4>
+                            {(report.keyMoments?.length ?? 0) > 0 ? (
+                              <ul className="list-disc pl-5 text-xs tablet:text-sm text-neutral-gray800 space-y-1.5 marker:text-primary-600">
+                                {report.keyMoments.map((s, idx) => (
+                                  <li key={idx}>{s}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-neutral-gray500">—</p>
+                            )}
+                          </div>
+
+                          <div className={reportDetailCard}>
+                            <h4 className={reportSectionHeading}>Overall</h4>
+                            <p className="text-lg font-bold text-neutral-gray900 tabular-nums">
+                              {report.overallRating != null && report.overallRating !== ''
+                                ? `${report.overallRating}/10`
+                                : '—'}
+                            </p>
+                          </div>
+
+                          <div className={reportDetailCard}>
+                            <h4 className={reportSectionHeading}>Recommendation</h4>
+                            <p className="text-xs tablet:text-sm text-neutral-gray800 leading-relaxed whitespace-pre-wrap">
+                              {displayReportText(report.recommendation)}
+                            </p>
+                          </div>
+
+                          <div className={reportDetailCard}>
+                            <h4 className={reportSectionHeading}>Notes</h4>
+                            <p className="text-xs tablet:text-sm text-neutral-gray800 leading-relaxed whitespace-pre-wrap">
+                              {displayReportText(report.notes)}
+                            </p>
+                          </div>
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </section>
     </div>
   );

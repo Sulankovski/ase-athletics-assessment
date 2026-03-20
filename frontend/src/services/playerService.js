@@ -32,6 +32,24 @@ export function fetchPlayerById(id) {
   return api.get(`/players/${playerPathSegment(id)}`);
 }
 
+/** Authenticated GET `/players/:id/reports` — `{ reports: [...] }` scout reports. */
+export function fetchPlayerReports(id) {
+  return api.get(`/players/${playerPathSegment(id)}/reports`);
+}
+
+/** Authenticated PUT `/players/:id/reports/:reportId` — partial/full scout report update. */
+export function updatePlayerReport(playerId, reportId, body) {
+  return api.put(
+    `/players/${playerPathSegment(playerId)}/reports/${playerPathSegment(reportId)}`,
+    body
+  );
+}
+
+/** Authenticated POST `/players/:id/reports` — create scout report. */
+export function createPlayerReport(playerId, body) {
+  return api.post(`/players/${playerPathSegment(playerId)}/reports`, body);
+}
+
 /** Authenticated PUT `/players/:id` — player body may include stats, attributes, contract. */
 export function updatePlayer(id, body) {
   return api.put(`/players/${playerPathSegment(id)}`, body);

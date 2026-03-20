@@ -2,6 +2,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { register, clearError } from '@/store/slices/authSlice';
 import PageLayout from '@/components/layout/PageLayout';
+import MandatoryFieldsNote from '@/components/MandatoryFieldsNote';
 
 export default function SignUpPage() {
   const dispatch = useDispatch();
@@ -56,7 +57,7 @@ export default function SignUpPage() {
               )}
               <div>
                 <label className="block text-sm font-medium text-neutral-gray700 mb-1" htmlFor="su-name">
-                  Name
+                  Name <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="su-name"
@@ -70,7 +71,7 @@ export default function SignUpPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-gray700 mb-1" htmlFor="su-email">
-                  Email
+                  Email <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="su-email"
@@ -87,7 +88,7 @@ export default function SignUpPage() {
                   className="block text-sm font-medium text-neutral-gray700 mb-1"
                   htmlFor="su-password"
                 >
-                  Password
+                  Password <span className="text-red-600">*</span>
                 </label>
                 <input
                   id="su-password"
