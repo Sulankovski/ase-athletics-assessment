@@ -53,7 +53,11 @@
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center bg-primary-600 text-white px-6 py-3 rounded-md text-sm font-semibold;
-    @apply hover:bg-primary-700 transition-colors shadow-sm;
+    @apply hover:bg-primary-700 transition-colors;
+    /* Crisp label on blue: avoid shadow+text compositing glitches (esp. Windows / Chrome). */
+    box-shadow: none;
+    text-shadow: none;
+    -webkit-font-smoothing: antialiased;
   }
 
   .btn-secondary {

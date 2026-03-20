@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PlayerListCard from '@/components/player/PlayerListCard';
-import { fetchPlayers } from '@/services/playerService';
+import PlayerEditAddPanel from '@/components/player/PlayerEditAddPanel';
+import { createPlayer, fetchPlayers } from '@/services/playerService';
+import {
+  buildPlayerCreatePayload,
+  cloneEmptyPlayerForCreate,
+  isPlayerCreateDraftValid,
+} from '@/utils/playerEdit';
 
 const PAGE_SIZE = 25;
 
 export default function PlayersListPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = useMemo(() => {
     const raw = parseInt(searchParams.get('page') || '1', 10);
@@ -18,6 +25,12 @@ export default function PlayersListPage() {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [listRefreshNonce, setListRefreshNonce] = useState(0);
+
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+  const [createDraft, setCreateDraft] = useState(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +56,62 @@ export default function PlayersListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page]);
+  }, [page, listRefreshNonce]);
+
+  useEffect(() => {
+    if (!addPlayerOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !createLoading) {
+        setAddPlayerOpen(false);
+        setCreateDraft(null);
+        setCreateError(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [addPlayerOpen, createLoading]);
+
+  const openAddPlayer = () => {
+    setCreateError(null);
+    setCreateDraft(cloneEmptyPlayerForCreate());
+    setAddPlayerOpen(true);
+  };
+
+  const closeAddPlayer = () => {
+    if (createLoading) return;
+    setAddPlayerOpen(false);
+    setCreateDraft(null);
+    setCreateError(null);
+  };
+
+  const handleCreatePlayer = async () => {
+    if (!createDraft || !isPlayerCreateDraftValid(createDraft)) return;
+    setCreateLoading(true);
+    setCreateError(null);
+    try {
+      const payload = buildPlayerCreatePayload(createDraft);
+      const created = await createPlayer(payload);
+      setAddPlayerOpen(false);
+      setCreateDraft(null);
+      setCreateError(null);
+      if (created?.id != null) {
+        navigate(`/players/${created.id}`);
+      } else {
+        setListRefreshNonce((n) => n + 1);
+      }
+    } catch (err) {
+      const detail = err?.data?.detail;
+      let msg =
+        err?.data?.message || err?.message || 'Could not create player';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d) => d?.message ?? d).join('; ');
+      }
+      setCreateError(msg);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   const totalPages = pagination?.totalPages ?? 0;
   const canPrev = page > 1;
@@ -57,12 +125,6 @@ export default function PlayersListPage() {
   return (
     <PageLayout mainClassName="flex flex-col flex-1 min-h-0 bg-neutral-gray50">
       <div className="w-full max-w-none flex flex-1 flex-col min-h-0 min-w-0 px-4 tablet:px-6 desktop:px-8 xl:px-10 2xl:px-12 py-6 tablet:py-8 desktop:py-10">
-        <div className="min-w-0 shrink-0 mb-6 tablet:mb-8">
-          <h1 className="mt-2 text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight">
-            All players
-          </h1>
-        </div>
-
         <Link
           to="/dashboard"
           className="inline-flex items-center gap-2 text-sm font-medium text-primary-700 hover:text-primary-800 shrink-0 mb-6"
@@ -70,6 +132,23 @@ export default function PlayersListPage() {
           <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
           Back to dashboard
         </Link>
+
+        <div className="min-w-0 shrink-0 mb-6 tablet:mb-8">
+          <div className="flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
+            <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1">
+              All players
+            </h1>
+            {!loading && (
+              <button
+                type="button"
+                onClick={openAddPlayer}
+                className="btn-primary py-2 px-4 text-sm shrink-0"
+              >
+                Add player
+              </button>
+            )}
+          </div>
+        </div>
 
         {loading && (
           <div
@@ -133,6 +212,62 @@ export default function PlayersListPage() {
               </nav>
             )}
           </>
+        )}
+
+        {addPlayerOpen && createDraft && (
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="players-list-add-title"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/50"
+              aria-label="Dismiss"
+              onClick={closeAddPlayer}
+              disabled={createLoading}
+            />
+            <div
+              className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-lg border border-neutral-gray200 bg-neutral-gray50 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sr-only">
+                <h2 id="players-list-add-title">Add player</h2>
+              </div>
+              <div className="overflow-y-auto flex-1 min-h-0 p-3 tablet:p-4">
+                <PlayerEditAddPanel mode="create" draft={createDraft} setDraft={setCreateDraft} />
+              </div>
+              {createError && (
+                <div className="mx-3 tablet:mx-4 mb-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                  {createError}
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2 border-t border-neutral-gray200 bg-white px-3 py-3 tablet:px-4">
+                <button
+                  type="button"
+                  onClick={closeAddPlayer}
+                  disabled={createLoading}
+                  className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreatePlayer}
+                  disabled={createLoading || !isPlayerCreateDraftValid(createDraft)}
+                  title={
+                    !isPlayerCreateDraftValid(createDraft) && !createLoading
+                      ? 'Fill all required profile fields (including image URL)'
+                      : undefined
+                  }
+                  className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {createLoading ? 'Creating…' : 'Create player'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </PageLayout>

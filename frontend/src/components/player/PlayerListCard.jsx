@@ -49,7 +49,7 @@ export default function PlayerListCard({ player }) {
   return (
     <Link
       to={`/players/${id}`}
-      className="group/player-card dashboard-card relative z-0 block min-w-0 overflow-visible rounded-t-lg !rounded-b-none !bg-white p-0 transition-[box-shadow,background-color] duration-500 ease-out delay-0 hover:z-30 hover:!bg-primary-100 hover:shadow-lg hover:shadow-primary-900/20 hover:delay-[650ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-2"
+      className="group/player-card dashboard-card relative z-0 block min-w-0 overflow-visible rounded-t-lg !rounded-b-none !bg-white p-0 transition-[background-color,box-shadow] duration-300 ease-in-out hover:z-30 hover:!bg-primary-100 hover:shadow-lg hover:shadow-primary-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-2"
     >
       <div className="flex min-w-0 gap-4 bg-transparent p-4 tablet:p-5">
         <div className="h-16 w-16 shrink-0 tablet:h-[4.5rem] tablet:w-[4.5rem]">
