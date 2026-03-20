@@ -20,6 +20,8 @@ import {
   countAll,
   countSearchByText,
   countSearchByParameters,
+  findDistinctTeams,
+  findDistinctPositions,
   SEARCH_COLUMNS,
 } from "../repositories/player.js";
 import * as playerStatsRepo from "../repositories/player_stats.js";
@@ -232,6 +234,18 @@ export async function getPlayers(query, db) {
     players,
     pagination: { page, limit, total, totalPages },
   };
+}
+
+/** @returns {{ teams: string[] }} */
+export async function getDistinctTeams(db) {
+  const teams = await findDistinctTeams(db);
+  return { teams };
+}
+
+/** @returns {{ positions: string[] }} */
+export async function getDistinctPositions(db) {
+  const positions = await findDistinctPositions(db);
+  return { positions };
 }
 
 export async function searchPlayersByText(query, db) {

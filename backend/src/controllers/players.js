@@ -33,6 +33,24 @@ router.get("/search", async (req, res, next) => {
   }
 });
 
+router.get("/teams", async (req, res, next) => {
+  try {
+    const result = await playersService.getDistinctTeams(req.db);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/positions", async (req, res, next) => {
+  try {
+    const result = await playersService.getDistinctPositions(req.db);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put("/:id", async (req, res, next) => {
   try {
     const player = await playersService.updatePlayer(req.params.id, req.body, req.db);

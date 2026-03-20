@@ -133,3 +133,25 @@ export async function countSearchByParameters(filters, db) {
   );
   return result.rows[0].total;
 }
+
+/** Distinct non-empty team names, sorted (for filter UIs). */
+export async function findDistinctTeams(db) {
+  const result = await db.query(
+    `SELECT DISTINCT team AS value
+     FROM players
+     WHERE team IS NOT NULL AND BTRIM(team) <> ''
+     ORDER BY team ASC`
+  );
+  return result.rows.map((r) => r.value);
+}
+
+/** Distinct non-empty positions, sorted (for filter UIs). */
+export async function findDistinctPositions(db) {
+  const result = await db.query(
+    `SELECT DISTINCT position AS value
+     FROM players
+     WHERE position IS NOT NULL AND BTRIM(position) <> ''
+     ORDER BY position ASC`
+  );
+  return result.rows.map((r) => r.value);
+}

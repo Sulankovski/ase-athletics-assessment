@@ -33,3 +33,5 @@ Server runs on `http://localhost:8000` (or `PORT` env var).
 - `POST /auth/logout` - Logout (Bearer token)
 - `GET /auth/me` - Current user (Bearer token)
 - `GET /players?limit=10` - List players
+- `GET /players/teams` - Distinct team names from DB (sorted; Bearer token)
+- `GET /players/positions` - Distinct player positions from DB (sorted; Bearer token)
