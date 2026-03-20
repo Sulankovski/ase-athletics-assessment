@@ -176,6 +176,12 @@ export default function DashboardPage() {
     setAppliedFilters(emptyFilters);
   };
 
+  const handleRemoveDashboardFilterKey = (key) => {
+    const next = { ...appliedFilters, [key]: '' };
+    setFilterForm(next);
+    setAppliedFilters(next);
+  };
+
   const appliedSummaryDisplay =
     loading && Object.keys(toQueryParams(appliedFilters)).length > 0
       ? toQueryParams(appliedFilters)
@@ -186,12 +192,24 @@ export default function DashboardPage() {
   const canApplyFilters = !filtersEffectivelyEqual(filterForm, appliedFilters);
 
   return (
-    <PageLayout mainClassName="flex flex-col bg-neutral-gray50">
-      <div className="container-custom py-6 tablet:py-8 desktop:py-10 large:py-12 flex-1 flex flex-col max-w-full min-w-0">
-        <div className="min-w-0">
-          <div ref={dashActionsRef} className="mt-1 w-full min-w-0">
-            <div className="flex flex-row items-center justify-between gap-3 tablet:gap-4">
-              <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1">
+    <PageLayout mainClassName="flex flex-col flex-1 min-h-0 bg-neutral-gray50">
+      <div className="w-full max-w-none flex flex-1 flex-col min-h-0 min-w-0 items-stretch self-stretch px-4 tablet:px-6 desktop:px-8 xl:px-10 2xl:px-12 py-6 tablet:py-8 desktop:py-10">
+        <div className="min-w-0 w-full max-w-none shrink-0 self-stretch text-left">
+          <div ref={dashActionsRef} className="mt-1 w-full min-w-0 max-w-none">
+            <div
+              className={
+                loading
+                  ? 'w-full'
+                  : 'flex flex-row items-center justify-between gap-3 tablet:gap-4'
+              }
+            >
+              <h2
+                className={
+                  loading
+                    ? 'w-full text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words text-left'
+                    : 'text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1 text-left'
+                }
+              >
                 Welcome, {user?.name || user?.email || 'User'}
               </h2>
               {!loading && (
@@ -245,35 +263,37 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
 
-        {!loading && (
-          <section aria-labelledby="kpi-heading" className="min-w-0 mt-6 tablet:mt-8">
+          <section
+            aria-labelledby="kpi-heading"
+            className="min-w-0 w-full max-w-none self-stretch mt-6 tablet:mt-8 text-left"
+          >
             <h2
               id="kpi-heading"
-              className="text-lg tablet:text-xl desktop:text-2xl font-bold text-neutral-gray900 leading-tight"
+              className="text-lg tablet:text-xl desktop:text-2xl font-bold text-neutral-gray900 leading-tight text-left"
             >
               Key performance indicators
             </h2>
-            <div className="mt-3 tablet:mt-4">
+            <div className="mt-3 tablet:mt-4 w-full max-w-none">
               <DashboardFilters
                 values={filterForm}
                 onChange={setFilterForm}
                 teamOptions={teamOptions}
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
+                onRemoveAppliedKey={handleRemoveDashboardFilterKey}
                 loading={loading}
                 applyDisabled={!canApplyFilters}
                 appliedSummary={appliedSummaryDisplay}
               />
             </div>
           </section>
-        )}
+        </div>
 
-        <div className="mt-2 tablet:mt-4 flex-1 flex flex-col min-h-0 min-w-0">
+        <div className="mt-2 tablet:mt-4 flex-1 flex flex-col min-h-0 min-w-0 w-full max-w-none self-stretch">
           {loading && (
             <div
-              className="flex flex-1 flex-col items-center justify-center gap-3 min-h-[40vh] tablet:min-h-[50vh] py-6 tablet:py-8 text-sm tablet:text-base text-neutral-gray600 px-4 text-center"
+              className="flex w-full max-w-none flex-1 flex-col items-center justify-center gap-3 min-h-[40vh] tablet:min-h-[50vh] py-6 tablet:py-8 text-sm tablet:text-base text-neutral-gray600 text-center"
               role="status"
               aria-live="polite"
             >
