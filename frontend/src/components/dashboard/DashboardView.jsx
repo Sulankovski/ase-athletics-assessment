@@ -4,6 +4,8 @@ import { Bar, Doughnut, Radar } from 'react-chartjs-2';
 import { formatSalary, formatAge, formatShortDate } from '@/utils/format';
 import { chartColors } from '@/styles/designTokens';
 import { PLAYER_NAV_FROM_DASHBOARD } from '@/constants/navigation';
+import { EMPTY_PLAYER_BROWSE_FILTERS } from '@/constants/playerSearchFilters';
+import { browseFiltersToSearchParams } from '@/utils/playerBrowseFilters';
 
 const ATTRIBUTE_ORDER = [
   ['pace', 'Pace'],
@@ -75,6 +77,32 @@ function playerRowInteraction(row, navigate) {
 
 const clickableRowClass =
   'cursor-pointer hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 transition-colors';
+
+/** Summary metric cards that navigate: hover/focus + full hit target */
+const summaryNavCardClass =
+  'dashboard-card group block p-3 tablet:p-4 desktop:p-5 min-w-0 transition-shadow duration-200 hover:shadow-lg hover:border-primary-600/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 cursor-pointer text-inherit no-underline';
+
+const summaryStaticCardClass = 'dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0';
+
+function playersListSearch(patch) {
+  return browseFiltersToSearchParams({ ...EMPTY_PLAYER_BROWSE_FILTERS, ...patch }, 1).toString();
+}
+
+function distributionRowNavHandlers(navigate, patch, label) {
+  const open = () => navigate({ pathname: '/players', search: playersListSearch(patch) });
+  return {
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': label,
+    onClick: open,
+    onKeyDown: (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+      }
+    },
+  };
+}
 
 export default function DashboardView({ data }) {
   const navigate = useNavigate();
@@ -250,15 +278,20 @@ export default function DashboardView({ data }) {
           Summary & on-pitch leaders
         </h3>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 large:grid-cols-5 gap-3 tablet:gap-4 desktop:gap-5">
-          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
+          <Link
+            to="/players"
+            state={PLAYER_NAV_FROM_DASHBOARD}
+            className={summaryNavCardClass}
+            aria-label="Open all players list"
+          >
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Total players
             </p>
-            <p className="mt-2 text-xl tablet:text-2xl desktop:text-3xl font-bold text-primary-700 tabular-nums">
+            <p className="mt-2 text-xl tablet:text-2xl desktop:text-3xl font-bold text-primary-700 tabular-nums group-hover:text-primary-800 transition-colors">
               {summary.total_players ?? '—'}
             </p>
-          </div>
-          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
+          </Link>
+          <div className={summaryStaticCardClass}>
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
               Average age
             </p>
@@ -266,96 +299,134 @@ export default function DashboardView({ data }) {
               {formatAge(summary.average_age)}
             </p>
           </div>
-          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
-              Top goals
-            </p>
-            {topGoal ? (
-              <>
-                <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
-                  {topGoal.id != null ? (
-                    <Link
-                      to={`/players/${topGoal.id}`}
-                      state={PLAYER_NAV_FROM_DASHBOARD}
-                      className="hover:text-primary-700 underline-offset-2 hover:underline"
-                    >
-                      {topGoal.name}
-                    </Link>
-                  ) : (
-                    topGoal.name
-                  )}
-                </p>
-                <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
-                  {topGoal.team} · {topGoal.position}
-                </p>
-                <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
-                  {topGoal.value}
-                </p>
-              </>
-            ) : (
-              <p className="mt-2 text-neutral-gray500">No data</p>
-            )}
-          </div>
-          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
-              Top assists
-            </p>
-            {topAssist ? (
-              <>
-                <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
-                  {topAssist.id != null ? (
-                    <Link
-                      to={`/players/${topAssist.id}`}
-                      state={PLAYER_NAV_FROM_DASHBOARD}
-                      className="hover:text-primary-700 underline-offset-2 hover:underline"
-                    >
-                      {topAssist.name}
-                    </Link>
-                  ) : (
-                    topAssist.name
-                  )}
-                </p>
-                <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
-                  {topAssist.team} · {topAssist.position}
-                </p>
-                <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
-                  {topAssist.value}
-                </p>
-              </>
-            ) : (
-              <p className="mt-2 text-neutral-gray500">No data</p>
-            )}
-          </div>
-          <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 tablet:col-span-2 desktop:col-span-1 large:col-span-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
-              Highest pace
-            </p>
-            {topPace ? (
-              <>
-                <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
-                  {topPace.id != null ? (
-                    <Link
-                      to={`/players/${topPace.id}`}
-                      state={PLAYER_NAV_FROM_DASHBOARD}
-                      className="hover:text-primary-700 underline-offset-2 hover:underline"
-                    >
-                      {topPace.name}
-                    </Link>
-                  ) : (
-                    topPace.name
-                  )}
-                </p>
-                <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
-                  {topPace.team} · {topPace.position}
-                </p>
-                <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
-                  {topPace.value}
-                </p>
-              </>
-            ) : (
-              <p className="mt-2 text-neutral-gray500">No data</p>
-            )}
-          </div>
+          {topGoal && topGoal.id != null ? (
+            <Link
+              to={`/players/${topGoal.id}`}
+              state={PLAYER_NAV_FROM_DASHBOARD}
+              className={summaryNavCardClass}
+              aria-label={`Open profile for ${topGoal.name}, top goals`}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
+                Top goals
+              </p>
+              <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 group-hover:text-primary-800 leading-tight break-words transition-colors">
+                {topGoal.name}
+              </p>
+              <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
+                {topGoal.team} · {topGoal.position}
+              </p>
+              <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
+                {topGoal.value}
+              </p>
+            </Link>
+          ) : (
+            <div className={summaryStaticCardClass}>
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
+                Top goals
+              </p>
+              {topGoal ? (
+                <>
+                  <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
+                    {topGoal.name}
+                  </p>
+                  <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
+                    {topGoal.team} · {topGoal.position}
+                  </p>
+                  <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
+                    {topGoal.value}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 text-neutral-gray500">No data</p>
+              )}
+            </div>
+          )}
+          {topAssist && topAssist.id != null ? (
+            <Link
+              to={`/players/${topAssist.id}`}
+              state={PLAYER_NAV_FROM_DASHBOARD}
+              className={summaryNavCardClass}
+              aria-label={`Open profile for ${topAssist.name}, top assists`}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
+                Top assists
+              </p>
+              <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 group-hover:text-primary-800 leading-tight break-words transition-colors">
+                {topAssist.name}
+              </p>
+              <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
+                {topAssist.team} · {topAssist.position}
+              </p>
+              <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
+                {topAssist.value}
+              </p>
+            </Link>
+          ) : (
+            <div className={summaryStaticCardClass}>
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
+                Top assists
+              </p>
+              {topAssist ? (
+                <>
+                  <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
+                    {topAssist.name}
+                  </p>
+                  <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
+                    {topAssist.team} · {topAssist.position}
+                  </p>
+                  <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
+                    {topAssist.value}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 text-neutral-gray500">No data</p>
+              )}
+            </div>
+          )}
+          {topPace && topPace.id != null ? (
+            <Link
+              to={`/players/${topPace.id}`}
+              state={PLAYER_NAV_FROM_DASHBOARD}
+              className={`${summaryNavCardClass} tablet:col-span-2 desktop:col-span-1 large:col-span-1`}
+              aria-label={`Open profile for ${topPace.name}, highest pace`}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
+                Highest pace
+              </p>
+              <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 group-hover:text-primary-800 leading-tight break-words transition-colors">
+                {topPace.name}
+              </p>
+              <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
+                {topPace.team} · {topPace.position}
+              </p>
+              <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
+                {topPace.value}
+              </p>
+            </Link>
+          ) : (
+            <div
+              className={`${summaryStaticCardClass} tablet:col-span-2 desktop:col-span-1 large:col-span-1`}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-gray500">
+                Highest pace
+              </p>
+              {topPace ? (
+                <>
+                  <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
+                    {topPace.name}
+                  </p>
+                  <p className="text-xs tablet:text-sm text-neutral-gray600 mt-1 leading-relaxed">
+                    {topPace.team} · {topPace.position}
+                  </p>
+                  <p className="mt-2 text-xl tablet:text-2xl font-bold text-primary-600 tabular-nums">
+                    {topPace.value}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 text-neutral-gray500">No data</p>
+              )}
+            </div>
+          )}
         </div>
 
         <h3 className="mt-6 tablet:mt-8 desktop:mt-10 text-sm tablet:text-base desktop:text-lg font-semibold text-neutral-gray800 leading-snug">
@@ -392,23 +463,6 @@ export default function DashboardView({ data }) {
                 </tbody>
               </table>
             </div>
-            {topSalary && (
-              <p className="px-3 tablet:px-4 py-2.5 tablet:py-3 text-xs text-neutral-gray500 bg-neutral-gray50 leading-relaxed">
-                Highest earner:{' '}
-                {topSalary.id != null ? (
-                  <Link
-                    to={`/players/${topSalary.id}`}
-                    state={PLAYER_NAV_FROM_DASHBOARD}
-                    className="font-semibold text-neutral-gray800 hover:text-primary-700 underline-offset-2 hover:underline"
-                  >
-                    {topSalary.name}
-                  </Link>
-                ) : (
-                  <span className="font-semibold text-neutral-gray800">{topSalary.name}</span>
-                )}{' '}
-                ({formatSalary(topSalary.value)})
-              </p>
-            )}
           </div>
 
           <div className="dashboard-table-shell min-w-0">
@@ -468,7 +522,15 @@ export default function DashboardView({ data }) {
                 </thead>
                 <tbody>
                   {(dist.by_team || []).map((row) => (
-                    <tr key={row.team} className="border-b border-neutral-gray100">
+                    <tr
+                      key={row.team}
+                      className={`border-b border-neutral-gray100 ${clickableRowClass}`}
+                      {...distributionRowNavHandlers(
+                        navigate,
+                        { team: row.team },
+                        `View players list filtered by team ${row.team}`,
+                      )}
+                    >
                       <td className="py-2 px-4 text-neutral-gray800">{row.team}</td>
                       <td className="py-2 px-4 text-right font-medium">{row.count}</td>
                     </tr>
@@ -493,7 +555,15 @@ export default function DashboardView({ data }) {
                 </thead>
                 <tbody>
                   {(dist.by_position || []).map((row) => (
-                    <tr key={row.position} className="border-b border-neutral-gray100">
+                    <tr
+                      key={row.position}
+                      className={`border-b border-neutral-gray100 ${clickableRowClass}`}
+                      {...distributionRowNavHandlers(
+                        navigate,
+                        { position: row.position },
+                        `View players list filtered by position ${row.position}`,
+                      )}
+                    >
                       <td className="py-2 px-4 text-neutral-gray800">{row.position}</td>
                       <td className="py-2 px-4 text-right font-medium">{row.count}</td>
                     </tr>
@@ -536,10 +606,6 @@ export default function DashboardView({ data }) {
         <h3 className="mt-6 tablet:mt-8 desktop:mt-10 text-sm tablet:text-base desktop:text-lg font-semibold text-neutral-gray800 leading-snug">
           Age demographics across teams
         </h3>
-        <p className="mt-2 text-xs tablet:text-sm text-neutral-gray600 max-w-3xl leading-relaxed">
-          League-wide age bands (all teams aggregated), plus team-level donuts for the six largest
-          squads by player count.
-        </p>
         <div className="mt-3 tablet:mt-4 grid grid-cols-1 large:grid-cols-2 gap-4 tablet:gap-5 desktop:gap-6 min-w-0">
           <div className="dashboard-card p-3 tablet:p-4 desktop:p-5 flex flex-col items-stretch min-w-0 overflow-hidden">
             <h4 className="text-xs tablet:text-sm font-semibold text-neutral-gray800">League total</h4>
@@ -614,8 +680,7 @@ export default function DashboardView({ data }) {
         </h3>
         <p className="mt-2 text-xs tablet:text-sm text-neutral-gray600 max-w-3xl leading-relaxed">
           Players are ordered by combined <strong>pace</strong>, <strong>shooting</strong>, and{' '}
-          <strong>passing</strong> (highest first). Tap a name to show or hide that profile on the
-          chart (at least one player stays visible).
+          <strong>passing</strong>.
         </p>
         <div className="mt-3 tablet:mt-4 dashboard-card p-3 tablet:p-4 desktop:p-5 min-w-0 overflow-hidden">
           {sortedRadar.length > 0 && (
@@ -680,13 +745,15 @@ export default function DashboardView({ data }) {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={showAllRadarPlayers}
-                className="self-start text-[11px] tablet:text-xs font-medium text-primary-700 hover:text-primary-800 hover:underline"
-              >
-                Show all players
-              </button>
+              {radarHiddenPlayers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={showAllRadarPlayers}
+                  className="self-start text-[11px] tablet:text-xs font-medium text-primary-700 hover:text-primary-800 hover:underline"
+                >
+                  Show all players
+                </button>
+              )}
             </div>
           )}
           <div className={`${chartSurfaceRadar} mx-auto`}>
