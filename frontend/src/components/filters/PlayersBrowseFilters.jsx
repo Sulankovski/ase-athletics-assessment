@@ -51,17 +51,30 @@ export default function PlayersBrowseFilters({
   loading = false,
   applyDisabled = false,
   appliedValues = null,
+  searchValue = '',
+  onSearchChange,
+  appliedSearchQuery = '',
+  browseFiltersLocked = false,
+  searchLocked = false,
 }) {
   const handleChange = (field, value) => {
     onChange({ ...values, [field]: value });
   };
 
   const appliedQP = appliedValues ? browseFiltersToQueryParams(appliedValues) : {};
-  const chips = Object.entries(appliedQP).map(([key, val]) => ({
+  const filterChips = Object.entries(appliedQP).map(([key, val]) => ({
     key,
     label: PLAYER_FILTER_LABELS[key] || key,
     value: String(val),
   }));
+  const searchQ = String(appliedSearchQuery ?? '').trim();
+  const chips =
+    searchQ !== ''
+      ? [
+          { key: '__search__', label: 'Search', value: searchQ },
+          ...filterChips,
+        ]
+      : filterChips;
 
   const renderFilterControl = (key) => {
     const label = PLAYER_FILTER_LABELS[key] || key;
@@ -74,7 +87,7 @@ export default function PlayersBrowseFilters({
           fieldLabel={PLAYER_FILTER_LABELS[key] || key}
           value={values[key] ?? ''}
           onChange={(v) => handleChange(key, v)}
-          disabled={loading}
+          disabled={loading || browseFiltersLocked}
           placeholderLabel="All teams"
           options={teamChoices.map((t) => ({ value: t, label: t }))}
         />
@@ -89,7 +102,7 @@ export default function PlayersBrowseFilters({
           fieldLabel={PLAYER_FILTER_LABELS[key] || key}
           value={values[key] ?? ''}
           onChange={(v) => handleChange(key, v)}
-          disabled={loading}
+          disabled={loading || browseFiltersLocked}
           placeholderLabel="All positions"
           options={positionChoices.map((p) => ({ value: p, label: p }))}
         />
@@ -103,7 +116,7 @@ export default function PlayersBrowseFilters({
           fieldLabel={PLAYER_FILTER_LABELS[key] || key}
           value={preferredFootSelectValue(values[key])}
           onChange={(v) => handleChange(key, v)}
-          disabled={loading}
+          disabled={loading || browseFiltersLocked}
           placeholderLabel="Any foot"
           options={PREFERRED_FOOT_OPTIONS.map(({ value: v, label: optLabel }) => ({
             value: v,
@@ -132,7 +145,7 @@ export default function PlayersBrowseFilters({
             }
             handleChange(key, sanitizeUnsignedIntegerInput(v));
           }}
-          disabled={loading}
+          disabled={loading || browseFiltersLocked}
           className={NUMBER_INPUT_CLASSES}
         />
       );
@@ -146,7 +159,7 @@ export default function PlayersBrowseFilters({
         placeholder={`Filter by ${label}…`}
         value={values[key] ?? ''}
         onChange={(e) => handleChange(key, e.target.value)}
-        disabled={loading}
+        disabled={loading || browseFiltersLocked}
         className={INPUT_CLASSES}
       />
     );
@@ -164,10 +177,41 @@ export default function PlayersBrowseFilters({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (browseFiltersLocked) {
+              collapse();
+              return;
+            }
             onApply();
             collapse();
           }}
         >
+          <div className="mb-4 min-w-0">
+            <label
+              htmlFor="players-browse-keyword-search"
+              className="block text-xs font-medium text-neutral-gray600 mb-1"
+            >
+              Keyword search
+            </label>
+            <input
+              id="players-browse-keyword-search"
+              type="search"
+              name="q"
+              autoComplete="off"
+              placeholder="Search — name, team, position, value…"
+              value={searchValue}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              disabled={loading || searchLocked}
+              className={`${INPUT_CLASSES} disabled:opacity-60 disabled:cursor-not-allowed`}
+            />
+            <p className="mt-1.5 text-[11px] text-neutral-gray500">
+              {searchLocked
+                ? 'Clear applied filters below to use keyword search.'
+                : browseFiltersLocked
+                  ? 'Keyword search is active — field filters are disabled until you clear the search box.'
+                  : ''}
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 desktop:grid-cols-4">
             {PLAYER_LIST_FILTER_KEYS.map((key) => (
               <div key={key} className="min-w-0">
@@ -185,8 +229,14 @@ export default function PlayersBrowseFilters({
           <div className="mt-4">
             <button
               type="submit"
-              disabled={loading || applyDisabled}
-              title={applyDisabled && !loading ? 'Change a filter to apply' : undefined}
+              disabled={loading || applyDisabled || browseFiltersLocked}
+              title={
+                browseFiltersLocked
+                  ? 'Clear keyword search to apply field filters'
+                  : applyDisabled && !loading
+                    ? 'Change a filter to apply'
+                    : undefined
+              }
               className="btn-primary py-2 px-4 text-sm disabled:opacity-50"
             >
               {loading ? 'Loading…' : 'Apply filters'}

@@ -37,6 +37,18 @@ export function browseFiltersToSearchParams(filters, page = 1) {
   return sp;
 }
 
+/**
+ * Same as browse filters URL plus optional full-text `q` (consumed by GET /players/search).
+ * Keeps browse filters and header search in sync in the address bar.
+ */
+export function playersListUrlSearchParams(filters, page = 1, textQuery = '') {
+  const sp = browseFiltersToSearchParams(filters, page);
+  const v = String(textQuery ?? '').trim();
+  if (v) sp.set('q', v);
+  else sp.delete('q');
+  return sp;
+}
+
 /** Read filter fields from current URL search params */
 export function browseFiltersFromSearchParams(searchParams) {
   const o = { ...EMPTY_PLAYER_BROWSE_FILTERS };

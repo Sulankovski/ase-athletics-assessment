@@ -27,6 +27,24 @@ export function fetchPlayers(params = {}) {
   return api.get(`/players${playersListQuery(params)}`);
 }
 
+function searchPlayersQuery(params = {}) {
+  const search = new URLSearchParams();
+  const term = String(params.q ?? params.query ?? '').trim();
+  if (!term) return '';
+  search.set('query', term);
+  const page = params.page != null ? Number(params.page) : 1;
+  const limit = params.limit != null ? Number(params.limit) : PLAYERS_LIST_LIMIT;
+  if (Number.isFinite(page) && page > 0) search.set('page', String(Math.floor(page)));
+  if (Number.isFinite(limit) && limit > 0) search.set('limit', String(Math.floor(limit)));
+  const q = search.toString();
+  return q ? `?${q}` : '';
+}
+
+/** Authenticated GET `/players/search` — `query` (or `q`) matches across player columns (ILIKE OR). */
+export function searchPlayers(params = {}) {
+  return api.get(`/players/search${searchPlayersQuery(params)}`);
+}
+
 /** Authenticated GET `/players/:id` — full player with stats, attributes, contract. */
 export function fetchPlayerById(id) {
   return api.get(`/players/${playerPathSegment(id)}`);

@@ -5,8 +5,8 @@ import PageLayout from '@/components/layout/PageLayout';
 import PlayerListCard from '@/components/player/PlayerListCard';
 import PlayerEditAddPanel from '@/components/player/PlayerEditAddPanel';
 import PlayersBrowseFilters from '@/components/filters/PlayersBrowseFilters';
-import { createPlayer, fetchPlayers } from '@/services/playerService';
-import { EMPTY_PLAYER_BROWSE_FILTERS } from '@/constants/playerSearchFilters';
+import { createPlayer, fetchPlayers, searchPlayers } from '@/services/playerService';
+import { EMPTY_PLAYER_BROWSE_FILTERS, PLAYER_LIST_FILTER_KEYS } from '@/constants/playerSearchFilters';
 import {
   buildPlayerCreatePayload,
   cloneEmptyPlayerForCreate,
@@ -17,7 +17,16 @@ import {
   browseFiltersFromSearchParams,
   browseFiltersToQueryParams,
   browseFiltersToSearchParams,
+  playersListUrlSearchParams,
 } from '@/utils/playerBrowseFilters';
+
+function urlHasBrowseFilterParams(sp) {
+  const params = sp instanceof URLSearchParams ? sp : new URLSearchParams(sp);
+  return PLAYER_LIST_FILTER_KEYS.some((k) => {
+    const v = params.get(k);
+    return v != null && String(v).trim() !== '';
+  });
+}
 import {
   clearPlayersBrowseFiltersCache,
   readPlayersBrowseFiltersCache,
@@ -34,6 +43,34 @@ export default function PlayersListPage() {
     const raw = parseInt(searchParams.get('page') || '1', 10);
     return Number.isFinite(raw) && raw >= 1 ? raw : 1;
   }, [searchParams]);
+
+  const listTextQuery = useMemo(() => (searchParams.get('q') || '').trim(), [searchParams]);
+  const qFromUrl = searchParams.get('q') ?? '';
+  const [searchInput, setSearchInput] = useState(qFromUrl);
+
+  useEffect(() => {
+    setSearchInput(qFromUrl);
+  }, [qFromUrl]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchParams((prev) => {
+        const prevQ = (prev.get('q') || '').trim();
+        const nextQ = searchInput.trim();
+        if (nextQ) {
+          if (prevQ === nextQ && !urlHasBrowseFilterParams(prev)) return prev;
+          const sp = new URLSearchParams();
+          sp.set('page', '1');
+          sp.set('q', nextQ);
+          return sp;
+        }
+        if (prevQ === '') return prev;
+        const filters = browseFiltersFromSearchParams(prev);
+        return browseFiltersToSearchParams(filters, 1);
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput, setSearchParams]);
 
   const [players, setPlayers] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -75,10 +112,11 @@ export default function PlayersListPage() {
     if (!browseFiltersEffectivelyEqual(appliedFilters, EMPTY_PLAYER_BROWSE_FILTERS)) {
       return;
     }
+    if ((searchParams.get('q') || '').trim()) return;
     const cached = readPlayersBrowseFiltersCache();
     if (!cached) return;
-    setSearchParams(browseFiltersToSearchParams(cached, page), { replace: true });
-  }, [appliedFilters, page, setSearchParams]);
+    setSearchParams(playersListUrlSearchParams(cached, page, ''), { replace: true });
+  }, [appliedFilters, page, searchParams, setSearchParams]);
 
   const applyFiltersDisabled = browseFiltersEffectivelyEqual(filterForm, appliedFilters);
 
@@ -87,11 +125,15 @@ export default function PlayersListPage() {
     setLoading(true);
     setError(null);
 
-    fetchPlayers({
-      page,
-      limit: PAGE_SIZE,
-      ...browseFiltersToQueryParams(appliedFilters),
-    })
+    const req = listTextQuery
+      ? searchPlayers({ query: listTextQuery, page, limit: PAGE_SIZE })
+      : fetchPlayers({
+          page,
+          limit: PAGE_SIZE,
+          ...browseFiltersToQueryParams(appliedFilters),
+        });
+
+    req
       .then((data) => {
         if (cancelled) return;
         setPlayers(Array.isArray(data?.players) ? data.players : []);
@@ -110,7 +152,7 @@ export default function PlayersListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, listRefreshNonce, filterQueryKey]);
+  }, [page, listRefreshNonce, filterQueryKey, listTextQuery, appliedFilters]);
 
   useEffect(() => {
     if (!addPlayerOpen) return undefined;
@@ -188,24 +230,42 @@ export default function PlayersListPage() {
 
   const goPage = (next) => {
     const p = Math.max(1, next);
-    setSearchParams(browseFiltersToSearchParams(appliedFilters, p));
+    const q = (searchParams.get('q') || '').trim();
+    if (q) {
+      const sp = new URLSearchParams();
+      if (p > 1) sp.set('page', String(p));
+      sp.set('q', q);
+      setSearchParams(sp);
+      return;
+    }
+    setSearchParams(playersListUrlSearchParams(appliedFilters, p, ''));
   };
 
   const handleApplyBrowseFilters = () => {
-    setSearchParams(browseFiltersToSearchParams(filterForm, 1));
+    setSearchInput('');
+    setSearchParams(playersListUrlSearchParams(filterForm, 1, ''));
   };
 
   const handleClearBrowseFilters = () => {
     clearPlayersBrowseFiltersCache();
-    setSearchParams(browseFiltersToSearchParams({ ...EMPTY_PLAYER_BROWSE_FILTERS }, 1));
+    setSearchInput('');
+    setSearchParams(playersListUrlSearchParams({ ...EMPTY_PLAYER_BROWSE_FILTERS }, 1, ''));
   };
 
   const handleRemoveBrowseFilterKey = (key) => {
+    if (key === '__search__') {
+      setSearchInput('');
+      setSearchParams((prev) => {
+        const filters = browseFiltersFromSearchParams(prev);
+        return browseFiltersToSearchParams(filters, 1);
+      });
+      return;
+    }
     const next = { ...appliedFilters, [key]: '' };
     if (browseFiltersEffectivelyEqual(next, EMPTY_PLAYER_BROWSE_FILTERS)) {
       clearPlayersBrowseFiltersCache();
     }
-    setSearchParams(browseFiltersToSearchParams(next, 1));
+    setSearchParams(playersListUrlSearchParams(next, 1, ''));
   };
 
   return (
@@ -225,6 +285,7 @@ export default function PlayersListPage() {
               <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1">
                 All players
               </h1>
+
               {!loading && (
                 <div className="flex shrink-0 items-center gap-2 self-center">
                   <button
@@ -277,6 +338,15 @@ export default function PlayersListPage() {
             loading={loading}
             applyDisabled={applyFiltersDisabled}
             appliedValues={appliedFilters}
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
+            appliedSearchQuery={listTextQuery}
+            browseFiltersLocked={
+              listTextQuery.length > 0 || searchInput.trim().length > 0
+            }
+            searchLocked={
+              Object.keys(browseFiltersToQueryParams(appliedFilters)).length > 0
+            }
           />
         </div>
 
