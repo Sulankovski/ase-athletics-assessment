@@ -4,12 +4,20 @@ import { ArrowLeft, Loader2, Menu } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PlayerListCard from '@/components/player/PlayerListCard';
 import PlayerEditAddPanel from '@/components/player/PlayerEditAddPanel';
+import PlayersBrowseFilters from '@/components/filters/PlayersBrowseFilters';
 import { createPlayer, fetchPlayers } from '@/services/playerService';
+import { EMPTY_PLAYER_BROWSE_FILTERS } from '@/constants/playerSearchFilters';
 import {
   buildPlayerCreatePayload,
   cloneEmptyPlayerForCreate,
   isPlayerCreateDraftValid,
 } from '@/utils/playerEdit';
+import {
+  browseFiltersEffectivelyEqual,
+  browseFiltersFromSearchParams,
+  browseFiltersToQueryParams,
+  browseFiltersToSearchParams,
+} from '@/utils/playerBrowseFilters';
 import { PLAYER_NAV_FROM_PLAYERS_LIST } from '@/constants/navigation';
 
 const PAGE_SIZE = 25;
@@ -35,12 +43,34 @@ export default function PlayersListPage() {
   const [listActionsOpen, setListActionsOpen] = useState(false);
   const listActionsRef = useRef(null);
 
+  const appliedFilters = useMemo(
+    () => browseFiltersFromSearchParams(searchParams),
+    [searchParams],
+  );
+
+  const filterQueryKey = useMemo(
+    () => JSON.stringify(browseFiltersToQueryParams(appliedFilters)),
+    [appliedFilters],
+  );
+
+  const [filterForm, setFilterForm] = useState({ ...EMPTY_PLAYER_BROWSE_FILTERS });
+
+  useEffect(() => {
+    setFilterForm(browseFiltersFromSearchParams(searchParams));
+  }, [searchParams]);
+
+  const applyFiltersDisabled = browseFiltersEffectivelyEqual(filterForm, appliedFilters);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetchPlayers({ page, limit: PAGE_SIZE })
+    fetchPlayers({
+      page,
+      limit: PAGE_SIZE,
+      ...browseFiltersToQueryParams(appliedFilters),
+    })
       .then((data) => {
         if (cancelled) return;
         setPlayers(Array.isArray(data?.players) ? data.players : []);
@@ -59,7 +89,7 @@ export default function PlayersListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, listRefreshNonce]);
+  }, [page, listRefreshNonce, filterQueryKey]);
 
   useEffect(() => {
     if (!addPlayerOpen) return undefined;
@@ -137,7 +167,20 @@ export default function PlayersListPage() {
 
   const goPage = (next) => {
     const p = Math.max(1, next);
-    setSearchParams(p <= 1 ? {} : { page: String(p) });
+    setSearchParams(browseFiltersToSearchParams(appliedFilters, p));
+  };
+
+  const handleApplyBrowseFilters = () => {
+    setSearchParams(browseFiltersToSearchParams(filterForm, 1));
+  };
+
+  const handleClearBrowseFilters = () => {
+    setSearchParams(browseFiltersToSearchParams({ ...EMPTY_PLAYER_BROWSE_FILTERS }, 1));
+  };
+
+  const handleRemoveBrowseFilterKey = (key) => {
+    const next = { ...appliedFilters, [key]: '' };
+    setSearchParams(browseFiltersToSearchParams(next, 1));
   };
 
   return (
@@ -197,6 +240,19 @@ export default function PlayersListPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="min-w-0 shrink-0 mb-6 tablet:mb-8">
+          <PlayersBrowseFilters
+            values={filterForm}
+            onChange={setFilterForm}
+            onApply={handleApplyBrowseFilters}
+            onClear={handleClearBrowseFilters}
+            onRemoveAppliedKey={handleRemoveBrowseFilterKey}
+            loading={loading}
+            applyDisabled={applyFiltersDisabled}
+            appliedValues={appliedFilters}
+          />
         </div>
 
         {loading && (

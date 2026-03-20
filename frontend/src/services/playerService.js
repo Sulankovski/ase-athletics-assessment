@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { browseFiltersToQueryParams } from '@/utils/playerBrowseFilters';
 
 function playerPathSegment(id) {
   const n = Number(id);
@@ -13,6 +14,10 @@ function playersListQuery(params = {}) {
   const limit = params.limit != null ? Number(params.limit) : PLAYERS_LIST_LIMIT;
   if (Number.isFinite(page) && page > 0) search.set('page', String(Math.floor(page)));
   if (Number.isFinite(limit) && limit > 0) search.set('limit', String(Math.floor(limit)));
+  const filters = browseFiltersToQueryParams(params);
+  for (const [k, v] of Object.entries(filters)) {
+    search.set(k, v);
+  }
   const q = search.toString();
   return q ? `?${q}` : '';
 }
