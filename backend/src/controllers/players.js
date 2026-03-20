@@ -24,6 +24,7 @@ router.get("", async (req, res, next) => {
   }
 });
 
+// Routes with literal segments must be registered before `GET /:id` so e.g. "search" is never treated as an id.
 router.get("/search", async (req, res, next) => {
   try {
     const result = await playersService.searchPlayersByText(req.query, req.db);

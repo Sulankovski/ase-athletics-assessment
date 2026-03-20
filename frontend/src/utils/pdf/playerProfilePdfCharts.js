@@ -1,3 +1,8 @@
+/**
+ * Server-less chart → PNG → jsPDF. Chart.js needs RadialLinearScale + RadarController registered
+ * (see registerDashboardCharts). Off-screen canvas is appended to the document briefly so
+ * browsers reliably paint before canvas.toDataURL; compareExport uses multi-series radars + aspect helpers.
+ */
 import { Chart } from 'chart.js';
 import { registerDashboardCharts } from '@/components/dashboard/registerCharts';
 import { COMPARE_ATTR_LABELS, COMPARE_STAT_LABELS } from '@/constants/compareMetrics';
@@ -44,12 +49,14 @@ function withAlpha(hex, alpha = 0.12) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/** Two rAFs: let Chart.js / the GPU finish drawing before freezing pixels for PNG export. */
 async function flushCanvasPaint() {
   await new Promise((r) => {
     requestAnimationFrame(() => requestAnimationFrame(r));
   });
 }
 
+/** Detached canvases sometimes snapshot blank; a hidden DOM node avoids that in Safari/Chrome. */
 function attachOffscreenCanvas(canvas) {
   canvas.style.cssText =
     'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';

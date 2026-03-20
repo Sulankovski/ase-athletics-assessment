@@ -15,6 +15,11 @@ dotenv.config({ path: join(BACKEND_DIR, ".env") });
 
 const app = express();
 
+/**
+ * CORS: reflect allowed Origin and credentials. Browsers send OPTIONS preflight
+ * for JSON cross-origin requests; we must echo Access-Control-* and 204.
+ * Unknown origins get 403 so only dev defaults + CORS_ALLOWED_ORIGINS can call the API from a browser.
+ */
 const defaultAllowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
 const configuredAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
   .split(",")

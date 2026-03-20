@@ -15,6 +15,7 @@ export async function getCurrentUser(req, res, next) {
   if (!jti) {
     return next(new TokenInvalidOrExpiredError("Invalid token"));
   }
+  // Logout deletes rows from `tokens`; stale JWTs must fail even if signature still verifies.
   const db = req.db;
   const tokenResult = await db.query(
     "SELECT 1 FROM tokens WHERE jti = $1 AND expires_at > NOW()",

@@ -1,3 +1,4 @@
+/** Empty VITE_BACKEND_URL → same-origin `/api` (Vite proxy in dev must forward to the Express port). */
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '/api';
 
 const getAuthToken = () => localStorage.getItem('token');

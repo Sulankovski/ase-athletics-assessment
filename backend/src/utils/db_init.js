@@ -85,6 +85,7 @@ export async function runSeeds() {
 }
 
 export async function initDb() {
+  // When Docker Postgres starts slower than Node, avoid crashing: retry connect, then migrate/seed.
   const maxAttempts = 10;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {

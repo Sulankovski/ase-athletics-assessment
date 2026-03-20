@@ -1,37 +1,56 @@
-# ASE Athletics API - Node.js Express Backend
+# ASE Athletics API (Node / Express)
 
-Node.js/Express equivalent of the FastAPI backend. Same project structure, logic, and API.
+REST API for players, auth, dashboard aggregates, and scout reports. Uses **PostgreSQL** via `pg`, **JWT** auth, and automatic **migrations + seeds** on startup.
+
+Full endpoint descriptions: **[../docs/API.md](../docs/API.md)**  
+Environment variables: **[../docs/ENVIRONMENT.md](../docs/ENVIRONMENT.md)**  
+Monorepo setup: **[../README.md](../README.md)**
 
 ## Setup
 
 ```bash
+cd backend
 npm install
+cp .env.example .env
 ```
 
-## Environment
-
-Copy `.env` and configure:
-
-- `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` - PostgreSQL
-- `JWT_SECRET` - JWT signing secret
+Edit `.env` — minimum **`DATABASE_URL`** and **`JWT_SECRET`**. See `docs/ENVIRONMENT.md` for examples.
 
 ## Run
 
 ```bash
+# Production-style (no file watch)
 npm start
-# or with auto-reload:
+
+# Development (restart on file change — Node 18+)
 npm run dev
 ```
 
-Server runs on `http://localhost:8000` (or `PORT` env var).
+Default URL: **http://localhost:8000** (override with `PORT`).
 
-## API
+## Database
 
-- `GET /` - Health check
-- `POST /auth/login` - Login (form: username, password)
-- `POST /auth/register` - Register (JSON: name, email, password)
-- `POST /auth/logout` - Logout (Bearer token)
-- `GET /auth/me` - Current user (Bearer token)
-- `GET /players?limit=10` - List players
-- `GET /players/teams` - Distinct team names from DB (sorted; Bearer token)
-- `GET /players/positions` - Distinct player positions from DB (sorted; Bearer token)
+- **Migrations:** `migrations/*.sql` — applied once, tracked in `migrations_run`.
+- **Seeds:** `seeds/*.js` — run once, tracked in `seeds_run`.
+- **Init:** `src/utils/db_init.js` waits for the DB (retries), then runs migrations, then seeds.
+
+Start Postgres locally with the repo root **`docker compose up -d`** (see root README).
+
+## Project structure (src/)
+
+| Path | Role |
+|------|------|
+| `main.js` | Express app, CORS, routes, error handler |
+| `controllers/` | HTTP routers → services |
+| `services/` | Business logic |
+| `repositories/` | SQL queries |
+| `models/` | Validation / DTO mapping |
+| `middleware/` | DB client per request, auth, security helpers |
+| `utils/` | DB init, JWT helpers |
+
+## Scripts
+
+| Script | Command |
+|--------|---------|
+| Start | `npm start` |
+| Dev (watch) | `npm run dev` |

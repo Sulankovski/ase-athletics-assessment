@@ -1,4 +1,8 @@
-/** Max per axis across compared players; radar uses normalized 0–100 for mixed stat units */
+/**
+ * Compare-page radar helpers. Stats mix incompatible units (goals vs minutes); we scale each axis
+ * by the max value among compared players so every axis reads 0–100 on the chart.
+ * Attributes are already 0–100 in the data model; max is still capped at 100 for the denominator.
+ */
 
 export function computeStatMaxes(players, keys) {
   const out = {};
@@ -28,6 +32,7 @@ export function computeAttrMaxes(players, keys) {
   return out;
 }
 
+/** Map raw stat/attr to 0–100 for Chart.js radial scale (100 = best in current comparison set). */
 export function normalizeRadarValue(raw, max) {
   if (raw == null || raw === '') return 0;
   const n = Number(raw);

@@ -23,6 +23,7 @@ function parseFilters(query) {
 export async function getDashboardStats(query, db) {
   const filters = parseFilters(query);
 
+  // Many independent SQL aggregations; run in parallel to keep dashboard load time predictable.
   const [
     summary,
     topGoals,

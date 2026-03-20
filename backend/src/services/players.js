@@ -48,6 +48,10 @@ async function enrichPlayer(playerRow, db) {
   return toPlayerResponse(playerRow, stats, attributes, contract);
 }
 
+/**
+ * Batch-load stats, attributes, and contracts for many players in three queries
+ * instead of N+1 per player (list/search endpoints).
+ */
 async function enrichPlayers(playerRows, db) {
   if (playerRows.length === 0) return [];
   const ids = playerRows.map((p) => p.id);
@@ -210,6 +214,10 @@ function getPaginationParams(query) {
   return { page, limit, offset };
 }
 
+/**
+ * List players: either unfiltered page, or AND-filter on whitelisted query keys (ILIKE substring).
+ * Keys must match SEARCH_COLUMNS in the repository — arbitrary query params are ignored for safety.
+ */
 export async function getPlayers(query, db) {
   const { page, limit, offset } = getPaginationParams(query);
   const filters = {};
