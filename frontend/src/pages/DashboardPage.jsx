@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Loader2 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
@@ -178,14 +178,9 @@ export default function DashboardPage() {
             </h2>
             {!loading && (
               <div className="flex flex-wrap items-center gap-2 shrink-0 tablet:pt-0.5">
-                <button
-                  type="button"
-                  disabled
-                  className="btn-secondary py-2 px-4 text-sm opacity-65 cursor-not-allowed"
-                  title="Coming soon"
-                >
+                <Link to="/players" className="btn-primary py-2 px-4 text-sm">
                   Show all players
-                </button>
+                </Link>
                 <button type="button" onClick={openAddPlayer} className="btn-primary py-2 px-4 text-sm">
                   Add player
                 </button>

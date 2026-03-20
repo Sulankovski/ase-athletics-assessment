@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
+import PlayersListPage from './pages/PlayersListPage';
 import PlayerProfilePage from './pages/PlayerProfilePage';
 
 function App() {
@@ -17,6 +18,14 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/players"
+        element={
+          <ProtectedRoute>
+            <PlayersListPage />
           </ProtectedRoute>
         }
       />

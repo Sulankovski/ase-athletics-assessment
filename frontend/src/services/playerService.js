@@ -5,6 +5,23 @@ function playerPathSegment(id) {
   return Number.isFinite(n) ? String(n) : encodeURIComponent(String(id));
 }
 
+const PLAYERS_LIST_LIMIT = 25;
+
+function playersListQuery(params = {}) {
+  const search = new URLSearchParams();
+  const page = params.page != null ? Number(params.page) : 1;
+  const limit = params.limit != null ? Number(params.limit) : PLAYERS_LIST_LIMIT;
+  if (Number.isFinite(page) && page > 0) search.set('page', String(Math.floor(page)));
+  if (Number.isFinite(limit) && limit > 0) search.set('limit', String(Math.floor(limit)));
+  const q = search.toString();
+  return q ? `?${q}` : '';
+}
+
+/** Authenticated GET `/players` — paginated list with full nested player objects. */
+export function fetchPlayers(params = {}) {
+  return api.get(`/players${playersListQuery(params)}`);
+}
+
 /** Authenticated GET `/players/:id` — full player with stats, attributes, contract. */
 export function fetchPlayerById(id) {
   return api.get(`/players/${playerPathSegment(id)}`);
