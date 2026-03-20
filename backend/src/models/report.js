@@ -101,6 +101,142 @@ export function validateReportCreate(data) {
   return value;
 }
 
+function normalizeReportUpdateInput(data) {
+  const d = data ?? {};
+  const out = {};
+  if ("scoutName" in d || "scout_name" in d) {
+    out.scoutName = d.scoutName ?? d.scout_name ?? "";
+  }
+  if ("date" in d) {
+    out.date = d.date ?? "";
+  }
+  if ("playerName" in d || "player_name" in d) {
+    out.playerName = d.playerName ?? d.player_name ?? "";
+  }
+  if ("matchDetails" in d || "match_details" in d) {
+    const md = d.matchDetails ?? d.match_details;
+    if (md != null && typeof md === "object") {
+      out.matchDetails = md;
+    }
+  }
+  if ("ratings" in d && d.ratings != null && typeof d.ratings === "object") {
+    out.ratings = d.ratings;
+  }
+  if ("strengths" in d) {
+    out.strengths = Array.isArray(d.strengths) ? d.strengths : [];
+  }
+  if ("weaknesses" in d) {
+    out.weaknesses = Array.isArray(d.weaknesses) ? d.weaknesses : [];
+  }
+  if ("keyMoments" in d || "key_moments" in d) {
+    const km = d.keyMoments ?? d.key_moments;
+    out.keyMoments = Array.isArray(km) ? km : [];
+  }
+  if ("overallRating" in d || "overall_rating" in d) {
+    out.overallRating = d.overallRating ?? d.overall_rating;
+  }
+  if ("recommendation" in d) {
+    out.recommendation = d.recommendation ?? "";
+  }
+  if ("notes" in d) {
+    out.notes = d.notes ?? "";
+  }
+  return out;
+}
+
+const matchDetailsUpdateSchema = Joi.object({
+  opponent: Joi.string().trim().allow(""),
+  competition: Joi.string().trim().allow(""),
+  result: Joi.string().trim().allow(""),
+  minutesPlayed: Joi.number().integer().min(0),
+  minutes_played: Joi.number().integer().min(0),
+  position: Joi.string().trim().allow(""),
+});
+
+const ratingsUpdateSchema = Joi.object({
+  technical: Joi.number().integer().min(0).max(10),
+  physical: Joi.number().integer().min(0).max(10),
+  mental: Joi.number().integer().min(0).max(10),
+  tactical: Joi.number().integer().min(0).max(10),
+  finishing: Joi.number().integer().min(0).max(10),
+  passing: Joi.number().integer().min(0).max(10),
+  dribbling: Joi.number().integer().min(0).max(10),
+  defending: Joi.number().integer().min(0).max(10),
+  leadership: Joi.number().integer().min(0).max(10),
+  workRate: Joi.number().integer().min(0).max(10),
+  work_rate: Joi.number().integer().min(0).max(10),
+});
+
+const reportUpdateSchema = Joi.object({
+  scoutName: Joi.string().trim().min(1),
+  date: Joi.string().trim(),
+  playerName: Joi.string().trim().allow(""),
+  matchDetails: matchDetailsUpdateSchema,
+  ratings: ratingsUpdateSchema,
+  strengths: Joi.array().items(Joi.string()),
+  weaknesses: Joi.array().items(Joi.string()),
+  keyMoments: Joi.array().items(Joi.string()),
+  overallRating: Joi.number().integer().min(0).max(10),
+  recommendation: Joi.string().trim().allow(""),
+  notes: Joi.string().trim().allow(""),
+});
+
+export function validateReportUpdate(data) {
+  const normalized = normalizeReportUpdateInput(data);
+  if (Object.keys(normalized).length === 0) {
+    throw new ValidationError("At least one field is required");
+  }
+  const { error, value } = reportUpdateSchema.validate(normalized, { stripUnknown: true });
+  if (error) {
+    throw new ValidationError(error.details[0].message);
+  }
+  if (value.date !== undefined && value.date !== "") {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value.date).trim())) {
+      throw new ValidationError("date must be in YYYY-MM-DD format");
+    }
+  }
+  return value;
+}
+
+export function parseReportForUpdate(validated) {
+  const updates = {};
+  if (validated.scoutName !== undefined) updates.scout_name = validated.scoutName;
+  if (validated.date !== undefined && validated.date !== "") {
+    updates.date = String(validated.date).trim();
+  }
+  if (validated.playerName !== undefined) updates.player_name = validated.playerName;
+  if (validated.matchDetails) {
+    const m = validated.matchDetails;
+    if (m.opponent !== undefined) updates.match_opponent = m.opponent;
+    if (m.competition !== undefined) updates.match_competition = m.competition;
+    if (m.result !== undefined) updates.match_result = m.result;
+    if (m.minutesPlayed !== undefined) updates.match_minutes_played = m.minutesPlayed;
+    if (m.minutes_played !== undefined) updates.match_minutes_played = m.minutes_played;
+    if (m.position !== undefined) updates.match_position = m.position;
+  }
+  if (validated.ratings) {
+    const r = validated.ratings;
+    if (r.technical !== undefined) updates.rating_technical = r.technical;
+    if (r.physical !== undefined) updates.rating_physical = r.physical;
+    if (r.mental !== undefined) updates.rating_mental = r.mental;
+    if (r.tactical !== undefined) updates.rating_tactical = r.tactical;
+    if (r.finishing !== undefined) updates.rating_finishing = r.finishing;
+    if (r.passing !== undefined) updates.rating_passing = r.passing;
+    if (r.dribbling !== undefined) updates.rating_dribbling = r.dribbling;
+    if (r.defending !== undefined) updates.rating_defending = r.defending;
+    if (r.leadership !== undefined) updates.rating_leadership = r.leadership;
+    if (r.workRate !== undefined) updates.rating_work_rate = r.workRate;
+    if (r.work_rate !== undefined) updates.rating_work_rate = r.work_rate;
+  }
+  if (validated.strengths !== undefined) updates.strengths = validated.strengths;
+  if (validated.weaknesses !== undefined) updates.weaknesses = validated.weaknesses;
+  if (validated.keyMoments !== undefined) updates.key_moments = validated.keyMoments;
+  if (validated.overallRating !== undefined) updates.overall_rating = validated.overallRating;
+  if (validated.recommendation !== undefined) updates.recommendation = validated.recommendation;
+  if (validated.notes !== undefined) updates.notes = validated.notes;
+  return updates;
+}
+
 function formatDateOnly(val) {
   if (val == null) return null;
   if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) return val.substring(0, 10);

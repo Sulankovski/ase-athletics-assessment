@@ -8,6 +8,10 @@ const REPORT_COLUMNS = [
   "overall_rating", "recommendation", "notes",
 ];
 
+const REPORT_UPDATEABLE_COLUMNS = REPORT_COLUMNS.filter((c) => c !== "player_id");
+
+const JSONB_COLUMNS = new Set(["strengths", "weaknesses", "key_moments"]);
+
 export async function create(playerId, data, db) {
   const pid = parseInt(playerId, 10);
   const values = [
@@ -51,4 +55,40 @@ export async function findByPlayerId(playerId, db) {
     [parseInt(playerId, 10)]
   );
   return result.rows;
+}
+
+export async function findByIdAndPlayerId(reportId, playerId, db) {
+  const result = await db.query("SELECT * FROM reports WHERE id = $1 AND player_id = $2", [
+    parseInt(reportId, 10),
+    parseInt(playerId, 10),
+  ]);
+  return result.rows[0] ?? null;
+}
+
+export async function update(reportId, playerId, data, db) {
+  const keys = REPORT_UPDATEABLE_COLUMNS.filter((k) => data[k] !== undefined);
+  if (keys.length === 0) {
+    return findByIdAndPlayerId(reportId, playerId, db);
+  }
+
+  let p = 1;
+  const setParts = keys.map((k) => {
+    const fragment = JSONB_COLUMNS.has(k) ? `${k} = $${p}::jsonb` : `${k} = $${p}`;
+    p += 1;
+    return fragment;
+  });
+  setParts.push("updated_at = NOW()");
+
+  const values = keys.map((k) => {
+    const v = data[k];
+    if (JSONB_COLUMNS.has(k)) return JSON.stringify(Array.isArray(v) ? v : []);
+    return v;
+  });
+  values.push(parseInt(reportId, 10), parseInt(playerId, 10));
+
+  const result = await db.query(
+    `UPDATE reports SET ${setParts.join(", ")} WHERE id = $${p} AND player_id = $${p + 1} RETURNING *`,
+    values
+  );
+  return result.rows[0] ?? null;
 }

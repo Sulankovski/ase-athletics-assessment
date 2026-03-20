@@ -26,8 +26,15 @@ import * as playerStatsRepo from "../repositories/player_stats.js";
 import * as playerAttributesRepo from "../repositories/player_attributes.js";
 import * as playerContractsRepo from "../repositories/player_contracts.js";
 import * as reportsRepo from "../repositories/reports.js";
-import { toReportResponse, validateReportCreate, parseReportForCreate } from "../models/report.js";
+import {
+  toReportResponse,
+  validateReportCreate,
+  parseReportForCreate,
+  validateReportUpdate,
+  parseReportForUpdate,
+} from "../models/report.js";
 import { PlayerNotFoundError } from "../exceptions/players.js";
+import { ReportNotFoundError } from "../exceptions/reports.js";
 import { ValidationError } from "../exceptions/validation.js";
 
 async function enrichPlayer(playerRow, db) {
@@ -160,6 +167,31 @@ export async function createPlayerReport(playerId, body, db) {
   const data = parseReportForCreate(body);
   data.player_name = data.player_name || player.name;
   const row = await reportsRepo.create(playerId, data, db);
+  return toReportResponse(row);
+}
+
+export async function updatePlayerReport(playerId, reportId, body, db) {
+  const player = await findById(playerId, db);
+  if (!player) {
+    throw new PlayerNotFoundError();
+  }
+  const existing = await reportsRepo.findByIdAndPlayerId(reportId, playerId, db);
+  if (!existing) {
+    throw new ReportNotFoundError();
+  }
+  const validated = validateReportUpdate(body);
+  const updates = parseReportForUpdate(validated);
+  if (Object.keys(updates).length === 0) {
+    throw new ValidationError("At least one field is required");
+  }
+  if (updates.player_name !== undefined) {
+    const name = String(updates.player_name || "").trim();
+    updates.player_name = name || player.name;
+  }
+  const row = await reportsRepo.update(reportId, playerId, updates, db);
+  if (!row) {
+    throw new ReportNotFoundError();
+  }
   return toReportResponse(row);
 }
 
