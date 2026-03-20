@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileDown, Loader2 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import ComparePlayerCard from '@/components/compare/ComparePlayerCard';
 import CompareStatsAttributesBar from '@/components/compare/CompareStatsAttributesBar';
@@ -9,6 +9,7 @@ import { ALL_COMPARE_ATTR_KEYS, ALL_COMPARE_STAT_KEYS } from '@/constants/compar
 import { useComparePlayers, COMPARE_MIN } from '@/context/ComparePlayersContext';
 import { getCachedComparePlayer, loadComparePlayerForCompare } from '@/utils/comparePlayerCache';
 import { computeAttrMaxes, computeStatMaxes } from '@/utils/compareRadar';
+import { buildComparePlayersPdf } from '@/utils/pdf/buildComparePlayersPdf';
 
 registerDashboardCharts();
 
@@ -25,6 +26,7 @@ export default function ComparePlayersPage() {
   const [error, setError] = useState(null);
   /** Synced across all cards: hover one “Age” chip → every player’s Age highlights */
   const [hoveredParam, setHoveredParam] = useState(null);
+  const [exportPdfLoading, setExportPdfLoading] = useState(false);
 
   const orderedStatKeys = useMemo(
     () => ALL_COMPARE_STAT_KEYS.filter((k) => selectedStats.includes(k)),
@@ -60,6 +62,18 @@ export default function ComparePlayersPage() {
     setSelectedStats([]);
     setSelectedAttributes([]);
   }, [setSelectedStats, setSelectedAttributes]);
+
+  const handleExportPdf = async () => {
+    if (players.length === 0) return;
+    setExportPdfLoading(true);
+    try {
+      await buildComparePlayersPdf(players, orderedStatKeys, orderedAttrKeys);
+    } catch (err) {
+      window.alert(err?.message || 'Could not export PDF');
+    } finally {
+      setExportPdfLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (selected.length < COMPARE_MIN) {
@@ -123,10 +137,25 @@ export default function ComparePlayersPage() {
             Back to player list
           </Link>
 
-          <div className="min-w-0 mb-6 tablet:mb-8">
+          <div className="min-w-0 mb-6 tablet:mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight">
               Compare players
             </h1>
+            {!tooFew && !loading && !error && players.length > 0 ? (
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={exportPdfLoading}
+                className="btn-secondary inline-flex shrink-0 items-center justify-center gap-2 self-start py-2.5 px-4 text-sm disabled:opacity-50 sm:self-auto"
+              >
+                {exportPdfLoading ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <FileDown className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                Export PDF
+              </button>
+            ) : null}
           </div>
         </div>
 

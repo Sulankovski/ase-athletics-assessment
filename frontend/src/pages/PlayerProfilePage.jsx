@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Loader2, Menu } from 'lucide-react';
+import { ArrowLeft, FileDown, Loader2, Menu } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PlayerProfileView from '@/components/player/PlayerProfileView';
 import { registerDashboardCharts } from '@/components/dashboard/registerCharts';
@@ -9,6 +9,7 @@ import { clonePlayerForEdit, buildPlayerUpdatePayload } from '@/utils/playerEdit
 import { cloneEmptyReportForCreate, buildReportCreatePayload, isReportCreateDraftValid } from '@/utils/reportEdit';
 import ReportEditAddPanel from '@/components/player/ReportEditAddPanel';
 import { useComparePlayers } from '@/context/ComparePlayersContext';
+import { buildPlayerProfilePdf } from '@/utils/pdf/buildPlayerProfilePdf';
 
 registerDashboardCharts();
 
@@ -52,6 +53,7 @@ export default function PlayerProfilePage() {
   const [performanceTitleWraps, setPerformanceTitleWraps] = useState(false);
   const [profileActionsOpen, setProfileActionsOpen] = useState(false);
   const profileActionsRef = useRef(null);
+  const [exportPdfLoading, setExportPdfLoading] = useState(false);
   const { addForCompare, isInCompareList } = useComparePlayers();
 
   const isDirty = useMemo(() => {
@@ -90,6 +92,19 @@ export default function PlayerProfilePage() {
     setDeleteModalOpen(false);
     setDeleteConfirmInput('');
     setDeleteError(null);
+  };
+
+  const handleExportPdf = async () => {
+    if (!player) return;
+    setExportPdfLoading(true);
+    try {
+      await buildPlayerProfilePdf(player);
+    } catch (err) {
+      const msg = err?.message || err?.data?.detail || 'Could not export PDF';
+      window.alert(typeof msg === 'string' ? msg : 'Could not export PDF');
+    } finally {
+      setExportPdfLoading(false);
+    }
   };
 
   const handleDeletePlayer = async () => {
@@ -375,6 +390,19 @@ export default function PlayerProfilePage() {
                           <>
                             <button
                               type="button"
+                              onClick={handleExportPdf}
+                              disabled={exportPdfLoading}
+                              className="btn-secondary inline-flex items-center gap-2 py-2 px-4 text-sm disabled:opacity-50"
+                            >
+                              {exportPdfLoading ? (
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                              ) : (
+                                <FileDown className="h-4 w-4 shrink-0" aria-hidden />
+                              )}
+                              Export PDF
+                            </button>
+                            <button
+                              type="button"
                               onClick={openAddReportModal}
                               className="btn-primary py-2 px-4 text-sm"
                             >
@@ -448,6 +476,22 @@ export default function PlayerProfilePage() {
                       </>
                     ) : (
                       <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileActionsOpen(false);
+                            handleExportPdf();
+                          }}
+                          disabled={exportPdfLoading}
+                          className="btn-secondary w-full justify-center inline-flex items-center gap-2 py-2 px-4 text-sm disabled:opacity-50"
+                        >
+                          {exportPdfLoading ? (
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                          ) : (
+                            <FileDown className="h-4 w-4 shrink-0" aria-hidden />
+                          )}
+                          Export PDF
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
