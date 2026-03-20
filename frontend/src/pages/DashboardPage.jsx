@@ -189,7 +189,6 @@ export default function DashboardPage() {
     <PageLayout mainClassName="flex flex-col bg-neutral-gray50">
       <div className="container-custom py-6 tablet:py-8 desktop:py-10 large:py-12 flex-1 flex flex-col max-w-full min-w-0">
         <div className="min-w-0">
-          <p className="text-xs tablet:text-sm font-medium text-primary-700">Football analytics</p>
           <div ref={dashActionsRef} className="mt-1 w-full min-w-0">
             <div className="flex flex-row items-center justify-between gap-3 tablet:gap-4">
               <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1">

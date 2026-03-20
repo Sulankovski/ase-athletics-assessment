@@ -6,6 +6,7 @@ import PlayerProfileView from '@/components/player/PlayerProfileView';
 import { registerDashboardCharts } from '@/components/dashboard/registerCharts';
 import { deletePlayer, fetchPlayerById, updatePlayer } from '@/services/playerService';
 import { clonePlayerForEdit, buildPlayerUpdatePayload } from '@/utils/playerEdit';
+import { useComparePlayers } from '@/context/ComparePlayersContext';
 
 registerDashboardCharts();
 
@@ -35,6 +36,7 @@ export default function PlayerProfilePage() {
   const [performanceTitleWraps, setPerformanceTitleWraps] = useState(false);
   const [profileActionsOpen, setProfileActionsOpen] = useState(false);
   const profileActionsRef = useRef(null);
+  const { addForCompare, isInCompareList } = useComparePlayers();
 
   const isDirty = useMemo(() => {
     if (!draft || !editBaseline) return false;
@@ -45,6 +47,8 @@ export default function PlayerProfilePage() {
     if (!player?.name) return false;
     return deleteConfirmInput.trim() === String(player.name).trim();
   }, [player?.name, deleteConfirmInput]);
+
+  const playerInCompareList = player?.id != null && isInCompareList(player.id);
 
   useEffect(() => {
     if (!deleteModalOpen) return undefined;
@@ -235,6 +239,7 @@ export default function PlayerProfilePage() {
                     aria-hidden="true"
                   >
                     <div className="hidden lg:flex flex-wrap items-center justify-end gap-2">
+                      <span className="btn-primary py-2 px-4 text-sm">Compare</span>
                       <span className="btn-primary py-2 px-4 text-sm">Edit</span>
                       <span className="btn-danger py-2 px-4 text-sm">Delete</span>
                     </div>
@@ -295,6 +300,15 @@ export default function PlayerProfilePage() {
                           </>
                         ) : (
                           <>
+                            {!playerInCompareList && (
+                              <button
+                                type="button"
+                                onClick={() => addForCompare(player)}
+                                className="btn-primary py-2 px-4 text-sm"
+                              >
+                                Compare
+                              </button>
+                            )}
                             <button type="button" onClick={startEdit} className="btn-primary py-2 px-4 text-sm">
                               Edit
                             </button>
@@ -354,6 +368,18 @@ export default function PlayerProfilePage() {
                       </>
                     ) : (
                       <>
+                        {!playerInCompareList && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileActionsOpen(false);
+                              addForCompare(player);
+                            }}
+                            className="btn-primary w-full justify-center py-2 px-4 text-sm"
+                          >
+                            Compare
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {

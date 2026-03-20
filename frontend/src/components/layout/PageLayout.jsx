@@ -1,5 +1,6 @@
 import SiteHeader from './SiteHeader';
 import SiteFooter from './SiteFooter';
+import ComparePlayersBar from '@/components/compare/ComparePlayersBar';
 
 /**
  * Global chrome for all routes: header + main + footer.
@@ -9,6 +10,7 @@ export default function PageLayout({ children, mainClassName = '' }) {
   return (
     <div className="min-h-screen flex flex-col font-primary bg-neutral-gray50 text-neutral-gray900 antialiased">
       <SiteHeader />
+      <ComparePlayersBar />
       <main className={`flex-1 w-full ${mainClassName}`}>{children}</main>
       <SiteFooter />
     </div>
