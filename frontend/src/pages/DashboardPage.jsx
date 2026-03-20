@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import { registerDashboardCharts } from '@/components/dashboard/registerCharts';
 import DashboardView from '@/components/dashboard/DashboardView';
@@ -14,6 +14,7 @@ import {
   cloneEmptyPlayerForCreate,
   isPlayerCreateDraftValid,
 } from '@/utils/playerEdit';
+import { PLAYER_NAV_FROM_DASHBOARD } from '@/constants/navigation';
 
 registerDashboardCharts();
 
@@ -58,6 +59,8 @@ export default function DashboardPage() {
   const [createDraft, setCreateDraft] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState(null);
+  const [dashActionsOpen, setDashActionsOpen] = useState(false);
+  const dashActionsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +108,21 @@ export default function DashboardPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [addPlayerOpen, createLoading]);
 
+  useEffect(() => {
+    if (!dashActionsOpen) return undefined;
+    const close = (e) => {
+      if (dashActionsRef.current && !dashActionsRef.current.contains(e.target)) {
+        setDashActionsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [dashActionsOpen]);
+
+  useEffect(() => {
+    if (loading) setDashActionsOpen(false);
+  }, [loading]);
+
   const openAddPlayer = () => {
     setCreateError(null);
     setCreateDraft(cloneEmptyPlayerForCreate());
@@ -129,7 +147,7 @@ export default function DashboardPage() {
       setCreateDraft(null);
       setCreateError(null);
       if (created?.id != null) {
-        navigate(`/players/${created.id}`);
+        navigate(`/players/${created.id}`, { state: PLAYER_NAV_FROM_DASHBOARD });
       } else {
         setStatsRefreshNonce((n) => n + 1);
       }
@@ -172,16 +190,57 @@ export default function DashboardPage() {
       <div className="container-custom py-6 tablet:py-8 desktop:py-10 large:py-12 flex-1 flex flex-col max-w-full min-w-0">
         <div className="min-w-0">
           <p className="text-xs tablet:text-sm font-medium text-primary-700">Football analytics</p>
-          <div className="mt-1 flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
-            <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1">
-              Welcome, {user?.name || user?.email || 'User'}
-            </h2>
-            {!loading && (
-              <div className="flex flex-wrap items-center gap-2 shrink-0 tablet:pt-0.5">
-                <Link to="/players" className="btn-primary py-2 px-4 text-sm">
+          <div ref={dashActionsRef} className="mt-1 w-full min-w-0">
+            <div className="flex flex-row items-center justify-between gap-3 tablet:gap-4">
+              <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1">
+                Welcome, {user?.name || user?.email || 'User'}
+              </h2>
+              {!loading && (
+                <div className="flex shrink-0 items-center gap-2 self-center">
+                  <div
+                    id="dashboard-header-actions"
+                    className="hidden lg:flex flex-wrap items-center gap-2"
+                  >
+                    <Link to="/players" className="btn-primary py-2 px-4 text-sm">
+                      Show all players
+                    </Link>
+                    <button type="button" onClick={openAddPlayer} className="btn-primary py-2 px-4 text-sm">
+                      Add player
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="lg:hidden inline-flex items-center justify-center rounded-md border border-neutral-gray300 bg-white p-2 text-neutral-gray800 shadow-sm hover:bg-neutral-gray50 transition-colors"
+                    aria-expanded={dashActionsOpen}
+                    aria-controls="dashboard-header-actions-mobile"
+                    onClick={() => setDashActionsOpen((o) => !o)}
+                  >
+                    <Menu className="h-5 w-5 shrink-0" aria-hidden />
+                    <span className="sr-only">Player actions</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            {!loading && dashActionsOpen && (
+              <div
+                id="dashboard-header-actions-mobile"
+                className="lg:hidden mt-3 flex flex-col gap-2 rounded-lg border border-neutral-gray200 bg-white p-3 shadow-sm"
+              >
+                <Link
+                  to="/players"
+                  className="btn-primary w-full justify-center py-2 px-4 text-sm"
+                  onClick={() => setDashActionsOpen(false)}
+                >
                   Show all players
                 </Link>
-                <button type="button" onClick={openAddPlayer} className="btn-primary py-2 px-4 text-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDashActionsOpen(false);
+                    openAddPlayer();
+                  }}
+                  className="btn-primary w-full justify-center py-2 px-4 text-sm"
+                >
                   Add player
                 </button>
               </div>

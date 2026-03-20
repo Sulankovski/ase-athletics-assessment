@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
 import { formatSalary, formatShortDate, formatMarketValue } from '@/utils/format';
+import { PLAYER_NAV_FROM_PLAYERS_LIST } from '@/constants/navigation';
 
 function isLikelyHttpImage(s) {
   return typeof s === 'string' && (s.startsWith('http') || s.startsWith('/'));
@@ -20,6 +23,7 @@ function displayStr(v) {
 
 export default function PlayerListCard({ player }) {
   const id = player?.id;
+  const [detailsOpen, setDetailsOpen] = useState(false);
   if (id == null) return null;
 
   const contract = player?.contract ?? {};
@@ -47,12 +51,19 @@ export default function PlayerListCard({ player }) {
   ];
 
   return (
-    <Link
-      to={`/players/${id}`}
-      className="group/player-card dashboard-card relative z-0 block min-w-0 overflow-visible rounded-t-lg !rounded-b-none !bg-white p-0 transition-[background-color,box-shadow] duration-300 ease-in-out hover:z-30 hover:!bg-primary-100 hover:shadow-lg hover:shadow-primary-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-2"
+    <div
+      className={`dashboard-card relative block min-w-0 border-t-4 border-t-primary-700 p-0 ${
+        detailsOpen
+          ? 'z-20 overflow-visible rounded-b-none rounded-t-lg border-x border-b-0 border-primary-800/25 bg-primary-100 shadow-none drop-shadow-md'
+          : 'z-0 overflow-hidden rounded-lg border border-primary-800/25 bg-white shadow-base'
+      }`}
     >
-      <div className="flex min-w-0 gap-4 bg-transparent p-4 tablet:p-5">
-        <div className="h-16 w-16 shrink-0 tablet:h-[4.5rem] tablet:w-[4.5rem]">
+      <div className="flex gap-3 p-4 tablet:gap-4 tablet:p-5">
+        <Link
+          to={`/players/${id}`}
+          state={PLAYER_NAV_FROM_PLAYERS_LIST}
+          className="flex h-16 w-16 shrink-0 tablet:h-[4.5rem] tablet:w-[4.5rem]"
+        >
           {isLikelyHttpImage(player?.image_url) ? (
             <img
               src={player.image_url}
@@ -67,32 +78,73 @@ export default function PlayerListCard({ player }) {
               {displayInitials(player?.name)}
             </div>
           )}
-        </div>
+        </Link>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold leading-tight text-neutral-gray900 tablet:text-lg">
-            {player?.name ?? '—'}
-          </p>
-          <p className="mt-1 text-sm text-neutral-gray600">
-            Age <span className="font-semibold text-neutral-gray800">{player?.age ?? '—'}</span>
-          </p>
-          <p className="mt-1 truncate text-sm text-neutral-gray600">{player?.team ?? '—'}</p>
-          <p className="mt-0.5 text-sm font-medium text-primary-800">{player?.position ?? '—'}</p>
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              to={`/players/${id}`}
+              state={PLAYER_NAV_FROM_PLAYERS_LIST}
+              className="min-w-0 truncate text-base font-bold leading-tight text-neutral-gray900 hover:text-primary-800 tablet:text-lg"
+            >
+              {player?.name ?? '—'}
+            </Link>
+            <button
+              type="button"
+              className={`shrink-0 rounded-md p-1 text-primary-700 transition-colors ${
+                detailsOpen ? 'hover:bg-primary-200/50' : 'hover:bg-primary-50'
+              }`}
+              aria-expanded={detailsOpen}
+              aria-label={detailsOpen ? 'Hide details' : 'Show details'}
+              onClick={(e) => {
+                e.preventDefault();
+                setDetailsOpen((v) => !v);
+              }}
+            >
+              <ChevronDown
+                className={`h-5 w-5 transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`}
+                aria-hidden
+              />
+            </button>
+          </div>
+          <div className="mt-2 flex flex-col items-stretch gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
+            <div className="min-w-0 space-y-1 tablet:flex-1">
+              <p className="text-sm text-neutral-gray600">
+                Age <span className="font-semibold text-neutral-gray800">{player?.age ?? '—'}</span>
+              </p>
+              <p className="truncate text-sm text-neutral-gray600">{player?.team ?? '—'}</p>
+              <p className="text-sm font-medium text-primary-800">{player?.position ?? '—'}</p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary w-full max-w-[11rem] shrink-0 self-center py-1.5 px-3 text-xs tablet:max-w-none tablet:w-auto tablet:py-2 tablet:px-4 tablet:text-sm desktop:py-2.5 desktop:px-5 large:py-3 large:px-6"
+            >
+              Compare
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Flush below summary, same width as card — continued border shell */}
-      <div className="pointer-events-none absolute left-[-1px] right-[-1px] top-full z-50 -mt-px box-border overflow-hidden rounded-b-lg border-x border-b border-primary-800/25 border-t-0 bg-primary-100 opacity-0 shadow-md shadow-primary-900/15 transition-[opacity,box-shadow] duration-500 ease-out delay-0 group-hover/player-card:pointer-events-auto group-hover/player-card:opacity-100 group-hover/player-card:shadow-lg group-hover/player-card:shadow-primary-900/20 group-hover/player-card:delay-[650ms]">
-        <div className="bg-primary-100 px-4 pb-4 pt-3 tablet:px-5 tablet:pb-5">
-          <dl className="space-y-2 text-xs tablet:text-sm">
-            {detailRows.map(([label, value]) => (
-              <div key={label} className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5">
-                <dt className="font-medium text-primary-900/70">{label}:</dt>
-                <dd className="min-w-0 break-words text-neutral-gray800">{value}</dd>
-              </div>
-            ))}
-          </dl>
+      {detailsOpen && (
+        <div className="absolute left-0 right-0 top-full z-10 -mt-px rounded-b-lg border-x border-b border-t border-primary-800/25 bg-primary-100 px-4 pb-4 pt-3 tablet:px-5">
+          <div className="relative ml-0.5 border-l border-primary-700/25 pl-3.5 tablet:ml-1 tablet:pl-4">
+            <dl className="space-y-2 text-xs tablet:text-sm">
+              {detailRows.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="relative -ml-3.5 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 pl-3.5 tablet:-ml-4 tablet:pl-4"
+                >
+                  <span
+                    className="pointer-events-none absolute left-0 top-[0.65em] w-2.5 border-t border-primary-700/25 tablet:w-3"
+                    aria-hidden
+                  />
+                  <dt className="font-medium text-primary-900/70">{label}:</dt>
+                  <dd className="min-w-0 break-words text-neutral-gray800">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
-      </div>
-    </Link>
+      )}
+    </div>
   );
 }

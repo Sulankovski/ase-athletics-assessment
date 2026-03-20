@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { ArrowLeft, Loader2, Menu } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PlayerProfileView from '@/components/player/PlayerProfileView';
 import { registerDashboardCharts } from '@/components/dashboard/registerCharts';
@@ -12,6 +12,12 @@ registerDashboardCharts();
 export default function PlayerProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPlayers = location.state?.from === 'players';
+  const backHref = fromPlayers ? '/players' : '/dashboard';
+  const backLabel = fromPlayers ? 'Back to player list' : 'Back to dashboard';
+  const returnLinkLabel = fromPlayers ? 'Return to player list' : 'Return to dashboard';
+
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,6 +31,10 @@ export default function PlayerProfilePage() {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const performanceTitleRef = useRef(null);
+  const [performanceTitleWraps, setPerformanceTitleWraps] = useState(false);
+  const [profileActionsOpen, setProfileActionsOpen] = useState(false);
+  const profileActionsRef = useRef(null);
 
   const isDirty = useMemo(() => {
     if (!draft || !editBaseline) return false;
@@ -113,6 +123,47 @@ export default function PlayerProfilePage() {
     };
   }, [id]);
 
+  useLayoutEffect(() => {
+    if (loading) return undefined;
+    const el = performanceTitleRef.current;
+    if (!el) return undefined;
+
+    const measure = () => {
+      const node = performanceTitleRef.current;
+      if (!node) return;
+      const tolerance = 2;
+      setPerformanceTitleWraps(node.scrollHeight > node.clientHeight + tolerance);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
+
+    return () => {
+      ro.disconnect();
+    };
+  }, [loading, isEditing, player, error]);
+
+  useEffect(() => {
+    if (!profileActionsOpen) return undefined;
+    const close = (e) => {
+      if (profileActionsRef.current && !profileActionsRef.current.contains(e.target)) {
+        setProfileActionsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [profileActionsOpen]);
+
+  useEffect(() => {
+    if (loading) setProfileActionsOpen(false);
+  }, [loading]);
+
+  useEffect(() => {
+    if (deleteModalOpen) setProfileActionsOpen(false);
+  }, [deleteModalOpen]);
+
   useEffect(() => {
     if (!isEditing) {
       setDraft(null);
@@ -163,62 +214,163 @@ export default function PlayerProfilePage() {
   return (
     <PageLayout mainClassName="flex flex-col flex-1 min-h-0 bg-neutral-gray50">
       <div className="w-full max-w-none flex flex-1 flex-col min-h-0 min-w-0 px-4 tablet:px-6 desktop:px-8 xl:px-10 2xl:px-12 py-6 tablet:py-8 desktop:py-10">
+        <Link
+          to={backHref}
+          className="inline-flex items-center gap-2 text-sm font-medium text-primary-700 hover:text-primary-800 shrink-0 mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          {backLabel}
+        </Link>
+
         {loading ? (
-          <div
-            className="flex flex-1 flex-col items-center justify-center gap-8 min-h-0 py-8 px-4 text-center"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="max-w-2xl">
-              <p className="text-xs tablet:text-sm font-medium text-primary-700">Player profile</p>
-              <h1 className="mt-2 text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight">
-                Detailed performance &amp; attributes
-              </h1>
+          <>
+            <div className="min-w-0 shrink-0">
+              <div className="mt-1 w-full min-w-0">
+                <div className="flex flex-row items-center justify-between gap-3 tablet:gap-4">
+                  <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1 text-left">
+                    Detailed performance &amp; attributes
+                  </h1>
+                  <div
+                    className="invisible pointer-events-none flex shrink-0 items-center gap-2 self-center"
+                    aria-hidden="true"
+                  >
+                    <div className="hidden lg:flex flex-wrap items-center justify-end gap-2">
+                      <span className="btn-primary py-2 px-4 text-sm">Edit</span>
+                      <span className="btn-danger py-2 px-4 text-sm">Delete</span>
+                    </div>
+                    <span className="lg:hidden inline-flex items-center justify-center rounded-md border border-neutral-gray300 bg-white p-2">
+                      <span className="h-5 w-5 block" />
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-3 text-sm text-neutral-gray600">
+            <div
+              className="flex flex-1 flex-col items-center justify-center gap-3 min-h-[35vh] tablet:min-h-[40vh] py-8 text-sm text-neutral-gray600"
+              role="status"
+              aria-live="polite"
+            >
               <Loader2 className="h-8 w-8 shrink-0 animate-spin text-primary-600" aria-hidden />
               <p>Loading player…</p>
             </div>
-          </div>
+          </>
         ) : (
           <>
             <div className="min-w-0 shrink-0">
-              <p className="text-xs tablet:text-sm font-medium text-primary-700">Player profile</p>
-              <div className="mt-1 flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
-                <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight min-w-0 flex-1">
-                  Detailed performance &amp; attributes
-                </h1>
-                {!error && player && (
-                  <div className="flex flex-wrap items-center gap-2 shrink-0 tablet:pt-0.5">
+              <div ref={profileActionsRef} className="mt-1 w-full min-w-0">
+                <div className="flex flex-row items-center justify-between gap-3 tablet:gap-4">
+                  <h1
+                    ref={performanceTitleRef}
+                    className={`text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1 ${
+                      performanceTitleWraps ? 'text-center' : 'text-left'
+                    }`}
+                  >
+                    Detailed performance &amp; attributes
+                  </h1>
+                  {!error && player && (
+                    <div className="flex shrink-0 items-center gap-2 self-center">
+                      <div
+                        id="profile-header-actions-desktop"
+                        className="hidden lg:flex flex-wrap items-center justify-end gap-2"
+                      >
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              disabled={saving}
+                              className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSave}
+                              disabled={saving || !isDirty}
+                              title={!isDirty && !saving ? 'Change a field to save' : undefined}
+                              className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {saving ? 'Saving…' : 'Save'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={startEdit} className="btn-primary py-2 px-4 text-sm">
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={openDeleteModal}
+                              className="btn-danger py-2 px-4 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="lg:hidden inline-flex items-center justify-center rounded-md border border-neutral-gray300 bg-white p-2 text-neutral-gray800 shadow-sm hover:bg-neutral-gray50 transition-colors"
+                        aria-expanded={profileActionsOpen}
+                        aria-controls="profile-header-actions-mobile"
+                        onClick={() => setProfileActionsOpen((o) => !o)}
+                      >
+                        <Menu className="h-5 w-5 shrink-0" aria-hidden />
+                        <span className="sr-only">Profile actions</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {!error && player && profileActionsOpen && (
+                  <div
+                    id="profile-header-actions-mobile"
+                    className="lg:hidden mt-3 flex flex-col gap-2 rounded-lg border border-neutral-gray200 bg-white p-3 shadow-sm"
+                  >
                     {isEditing ? (
                       <>
                         <button
                           type="button"
-                          onClick={cancelEdit}
+                          onClick={() => {
+                            setProfileActionsOpen(false);
+                            cancelEdit();
+                          }}
                           disabled={saving}
-                          className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+                          className="btn-secondary w-full justify-center py-2 px-4 text-sm disabled:opacity-50"
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          onClick={handleSave}
+                          onClick={() => {
+                            setProfileActionsOpen(false);
+                            handleSave();
+                          }}
                           disabled={saving || !isDirty}
                           title={!isDirty && !saving ? 'Change a field to save' : undefined}
-                          className="btn-primary py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="btn-primary w-full justify-center py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {saving ? 'Saving…' : 'Save'}
                         </button>
                       </>
                     ) : (
                       <>
-                        <button type="button" onClick={startEdit} className="btn-primary py-2 px-4 text-sm">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileActionsOpen(false);
+                            startEdit();
+                          }}
+                          className="btn-primary w-full justify-center py-2 px-4 text-sm"
+                        >
                           Edit
                         </button>
                         <button
                           type="button"
-                          onClick={openDeleteModal}
-                          className="btn-danger py-2 px-4 text-sm"
+                          onClick={() => {
+                            setProfileActionsOpen(false);
+                            openDeleteModal();
+                          }}
+                          className="btn-danger w-full justify-center py-2 px-4 text-sm"
                         >
                           Delete
                         </button>
@@ -239,10 +391,10 @@ export default function PlayerProfilePage() {
             </p>
             <p className="mt-1">{error.message}</p>
             <Link
-              to="/dashboard"
+              to={backHref}
               className="mt-3 inline-block text-sm font-medium text-primary-800 underline hover:no-underline"
             >
-              Return to dashboard
+              {returnLinkLabel}
             </Link>
           </div>
         )}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bar, Doughnut, Radar } from 'react-chartjs-2';
 import { formatSalary, formatAge, formatShortDate } from '@/utils/format';
 import { chartColors } from '@/styles/designTokens';
+import { PLAYER_NAV_FROM_DASHBOARD } from '@/constants/navigation';
 
 const ATTRIBUTE_ORDER = [
   ['pace', 'Pace'],
@@ -62,11 +63,11 @@ function playerRowInteraction(row, navigate) {
     role: 'link',
     tabIndex: 0,
     'aria-label': `View profile for ${name}`,
-    onClick: () => navigate(`/players/${id}`),
+    onClick: () => navigate(`/players/${id}`, { state: PLAYER_NAV_FROM_DASHBOARD }),
     onKeyDown: (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        navigate(`/players/${id}`);
+        navigate(`/players/${id}`, { state: PLAYER_NAV_FROM_DASHBOARD });
       }
     },
   };
@@ -273,7 +274,11 @@ export default function DashboardView({ data }) {
               <>
                 <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
                   {topGoal.id != null ? (
-                    <Link to={`/players/${topGoal.id}`} className="hover:text-primary-700 underline-offset-2 hover:underline">
+                    <Link
+                      to={`/players/${topGoal.id}`}
+                      state={PLAYER_NAV_FROM_DASHBOARD}
+                      className="hover:text-primary-700 underline-offset-2 hover:underline"
+                    >
                       {topGoal.name}
                     </Link>
                   ) : (
@@ -299,7 +304,11 @@ export default function DashboardView({ data }) {
               <>
                 <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
                   {topAssist.id != null ? (
-                    <Link to={`/players/${topAssist.id}`} className="hover:text-primary-700 underline-offset-2 hover:underline">
+                    <Link
+                      to={`/players/${topAssist.id}`}
+                      state={PLAYER_NAV_FROM_DASHBOARD}
+                      className="hover:text-primary-700 underline-offset-2 hover:underline"
+                    >
                       {topAssist.name}
                     </Link>
                   ) : (
@@ -325,7 +334,11 @@ export default function DashboardView({ data }) {
               <>
                 <p className="mt-2 text-base tablet:text-lg font-bold text-neutral-gray900 leading-tight break-words">
                   {topPace.id != null ? (
-                    <Link to={`/players/${topPace.id}`} className="hover:text-primary-700 underline-offset-2 hover:underline">
+                    <Link
+                      to={`/players/${topPace.id}`}
+                      state={PLAYER_NAV_FROM_DASHBOARD}
+                      className="hover:text-primary-700 underline-offset-2 hover:underline"
+                    >
                       {topPace.name}
                     </Link>
                   ) : (
@@ -385,6 +398,7 @@ export default function DashboardView({ data }) {
                 {topSalary.id != null ? (
                   <Link
                     to={`/players/${topSalary.id}`}
+                    state={PLAYER_NAV_FROM_DASHBOARD}
                     className="font-semibold text-neutral-gray800 hover:text-primary-700 underline-offset-2 hover:underline"
                   >
                     {topSalary.name}

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Menu } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PlayerListCard from '@/components/player/PlayerListCard';
 import PlayerEditAddPanel from '@/components/player/PlayerEditAddPanel';
@@ -10,6 +10,7 @@ import {
   cloneEmptyPlayerForCreate,
   isPlayerCreateDraftValid,
 } from '@/utils/playerEdit';
+import { PLAYER_NAV_FROM_PLAYERS_LIST } from '@/constants/navigation';
 
 const PAGE_SIZE = 25;
 
@@ -31,6 +32,8 @@ export default function PlayersListPage() {
   const [createDraft, setCreateDraft] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState(null);
+  const [listActionsOpen, setListActionsOpen] = useState(false);
+  const listActionsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +74,21 @@ export default function PlayersListPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [addPlayerOpen, createLoading]);
 
+  useEffect(() => {
+    if (!listActionsOpen) return undefined;
+    const close = (e) => {
+      if (listActionsRef.current && !listActionsRef.current.contains(e.target)) {
+        setListActionsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [listActionsOpen]);
+
+  useEffect(() => {
+    if (loading) setListActionsOpen(false);
+  }, [loading]);
+
   const openAddPlayer = () => {
     setCreateError(null);
     setCreateDraft(cloneEmptyPlayerForCreate());
@@ -95,7 +113,7 @@ export default function PlayersListPage() {
       setCreateDraft(null);
       setCreateError(null);
       if (created?.id != null) {
-        navigate(`/players/${created.id}`);
+        navigate(`/players/${created.id}`, { state: PLAYER_NAV_FROM_PLAYERS_LIST });
       } else {
         setListRefreshNonce((n) => n + 1);
       }
@@ -134,18 +152,49 @@ export default function PlayersListPage() {
         </Link>
 
         <div className="min-w-0 shrink-0 mb-6 tablet:mb-8">
-          <div className="flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
-            <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1">
-              All players
-            </h1>
-            {!loading && (
-              <button
-                type="button"
-                onClick={openAddPlayer}
-                className="btn-primary py-2 px-4 text-sm shrink-0"
+          <div ref={listActionsRef} className="mt-1 w-full min-w-0">
+            <div className="flex flex-row items-center justify-between gap-3 tablet:gap-4">
+              <h1 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-neutral-gray900 leading-tight break-words min-w-0 flex-1 pr-1">
+                All players
+              </h1>
+              {!loading && (
+                <div className="flex shrink-0 items-center gap-2 self-center">
+                  <button
+                    type="button"
+                    onClick={openAddPlayer}
+                    className="btn-primary hidden lg:inline-flex py-2 px-4 text-sm"
+                  >
+                    Add player
+                  </button>
+                  <button
+                    type="button"
+                    className="lg:hidden inline-flex items-center justify-center rounded-md border border-neutral-gray300 bg-white p-2 text-neutral-gray800 shadow-sm hover:bg-neutral-gray50 transition-colors"
+                    aria-expanded={listActionsOpen}
+                    aria-controls="players-list-header-actions-mobile"
+                    onClick={() => setListActionsOpen((o) => !o)}
+                  >
+                    <Menu className="h-5 w-5 shrink-0" aria-hidden />
+                    <span className="sr-only">Player actions</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            {!loading && listActionsOpen && (
+              <div
+                id="players-list-header-actions-mobile"
+                className="lg:hidden mt-3 flex flex-col gap-2 rounded-lg border border-neutral-gray200 bg-white p-3 shadow-sm"
               >
-                Add player
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setListActionsOpen(false);
+                    openAddPlayer();
+                  }}
+                  className="btn-primary w-full justify-center py-2 px-4 text-sm"
+                >
+                  Add player
+                </button>
+              </div>
             )}
           </div>
         </div>
