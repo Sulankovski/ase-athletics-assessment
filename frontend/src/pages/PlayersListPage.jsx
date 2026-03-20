@@ -32,6 +32,7 @@ import {
   readPlayersBrowseFiltersCache,
   writePlayersBrowseFiltersCache,
 } from '@/utils/sessionFiltersCache';
+import { invalidatePlayerLookupOptions } from '@/hooks/usePlayerLookupOptions';
 import { PLAYER_NAV_FROM_PLAYERS_LIST } from '@/constants/navigation';
 
 const PAGE_SIZE = 25;
@@ -202,6 +203,7 @@ export default function PlayersListPage() {
     try {
       const payload = buildPlayerCreatePayload(createDraft);
       const created = await createPlayer(payload);
+      invalidatePlayerLookupOptions();
       setAddPlayerOpen(false);
       setCreateDraft(null);
       setCreateError(null);

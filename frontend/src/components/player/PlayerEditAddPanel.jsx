@@ -1,3 +1,5 @@
+import PlayerLookupSelect from '@/components/filters/PlayerLookupSelect';
+import ResponsiveSelect from '@/components/filters/ResponsiveSelect';
 import {
   PREFERRED_FOOT_OPTIONS,
   preferredFootSelectValue,
@@ -128,6 +130,8 @@ export default function PlayerEditAddPanel({ mode = 'edit', draft, setDraft }) {
             {PLAYER_EDIT_FIELDS.map(([key, label]) => {
               const isUnsignedNumber = PROFILE_UNSIGNED_NUMBER_KEYS.has(key);
               const isPreferredFoot = key === 'preferred_foot';
+              const isTeam = key === 'team';
+              const isPosition = key === 'position';
               return (
                 <div key={key} className="min-w-0">
                   <label
@@ -143,19 +147,35 @@ export default function PlayerEditAddPanel({ mode = 'edit', draft, setDraft }) {
                     )}
                   </label>
                   {isPreferredFoot ? (
-                    <select
+                    <ResponsiveSelect
                       id={`${idPrefix}-${key}`}
+                      fieldLabel={label}
                       value={preferredFootSelectValue(draft[key])}
-                      onChange={(e) => setPlayerField(key, e.target.value)}
-                      className="input py-2 text-sm w-full"
-                    >
-                      <option value="">Select foot…</option>
-                      {PREFERRED_FOOT_OPTIONS.map(({ value: v, label: optLabel }) => (
-                        <option key={v} value={v}>
-                          {optLabel}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => setPlayerField(key, v)}
+                      placeholderLabel="Select foot…"
+                      options={PREFERRED_FOOT_OPTIONS.map(({ value: v, label: optLabel }) => ({
+                        value: v,
+                        label: optLabel,
+                      }))}
+                    />
+                  ) : isTeam ? (
+                    <PlayerLookupSelect
+                      kind="team"
+                      id={`${idPrefix}-${key}`}
+                      fieldLabel={label}
+                      value={draft[key] ?? ''}
+                      onChange={(v) => setPlayerField(key, v)}
+                      placeholderLabel="Select team…"
+                    />
+                  ) : isPosition ? (
+                    <PlayerLookupSelect
+                      kind="position"
+                      id={`${idPrefix}-${key}`}
+                      fieldLabel={label}
+                      value={draft[key] ?? ''}
+                      onChange={(v) => setPlayerField(key, v)}
+                      placeholderLabel="Select position…"
+                    />
                   ) : (
                     <input
                       id={`${idPrefix}-${key}`}

@@ -3,7 +3,7 @@ import { ChevronDown, X } from 'lucide-react';
 
 const NARROW_QUERY = '(max-width: 639px)';
 
-function useNarrowBrowseSelect() {
+function useNarrowResponsiveSelect() {
   const [narrow, setNarrow] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia(NARROW_QUERY).matches : false,
   );
@@ -23,12 +23,11 @@ const BASE_SELECT_CLASSES =
   'input w-full min-h-[44px] touch-manipulation py-2.5 text-base sm:min-h-0 sm:py-2 sm:text-sm disabled:opacity-60';
 
 /**
- * Browse filters: native `<select>` from `sm` breakpoint up; on small screens, a tappable
- * control opens a bottom sheet with larger touch targets (team / position / foot).
+ * Native `<select>` from `sm` up; below `sm`, a button opens a bottom sheet with large touch targets.
  *
- * `options`: `{ value, label }[]` — does not include the empty placeholder; that uses `placeholderLabel`.
+ * `options`: `{ value, label }[]` — omit placeholder row; use `placeholderLabel` for the empty value.
  */
-export default function BrowseFilterSelect({
+export default function ResponsiveSelect({
   id,
   fieldLabel,
   value,
@@ -37,7 +36,7 @@ export default function BrowseFilterSelect({
   placeholderLabel,
   options,
 }) {
-  const narrow = useNarrowBrowseSelect();
+  const narrow = useNarrowResponsiveSelect();
   const [open, setOpen] = useState(false);
 
   const selectedLabel =

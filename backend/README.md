@@ -52,4 +52,4 @@ Start Postgres locally with the repo root **`docker compose up -d`** (see root R
 
 | Script | Command |
 |--------|---------|
-| Start | `npm start` |
+| Start | `npm run dev` |

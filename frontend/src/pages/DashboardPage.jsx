@@ -27,6 +27,7 @@ import {
   readDashboardFiltersCache,
   writeDashboardFiltersCache,
 } from '@/utils/sessionFiltersCache';
+import { invalidatePlayerLookupOptions } from '@/hooks/usePlayerLookupOptions';
 
 registerDashboardCharts();
 
@@ -43,7 +44,6 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [filterForm, setFilterForm] = useState(initialDashboardFiltersState);
   const [appliedFilters, setAppliedFilters] = useState(initialDashboardFiltersState);
-  const [teamOptions, setTeamOptions] = useState([]);
   const [statsRefreshNonce, setStatsRefreshNonce] = useState(0);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState(null);
@@ -65,15 +65,6 @@ export default function DashboardPage() {
     const applyPayload = (payload) => {
       if (cancelled) return;
       setData(payload);
-      const af = payload?.applied_filters ?? {};
-      const narrowedByTeam = af.team != null && String(af.team).trim() !== '';
-      if (!narrowedByTeam && payload?.distributions?.by_team?.length) {
-        setTeamOptions(
-          [...payload.distributions.by_team]
-            .map((r) => r.team)
-            .sort((a, b) => a.localeCompare(b)),
-        );
-      }
     };
 
     // Fresh network when user explicitly refreshed (e.g. after creating a player).
@@ -159,6 +150,7 @@ export default function DashboardPage() {
     try {
       const payload = buildPlayerCreatePayload(createDraft);
       const created = await createPlayer(payload);
+      invalidatePlayerLookupOptions();
       setAddPlayerOpen(false);
       setCreateDraft(null);
       setCreateError(null);
@@ -298,7 +290,6 @@ export default function DashboardPage() {
               <DashboardFilters
                 values={filterForm}
                 onChange={setFilterForm}
-                teamOptions={teamOptions}
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
                 onRemoveAppliedKey={handleRemoveDashboardFilterKey}

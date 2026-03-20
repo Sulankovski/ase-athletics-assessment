@@ -1,8 +1,7 @@
-import BrowseFilterSelect from '@/components/filters/BrowseFilterSelect';
+import PlayerLookupSelect from '@/components/filters/PlayerLookupSelect';
+import ResponsiveSelect from '@/components/filters/ResponsiveSelect';
 import CollapsibleFiltersPanel from '@/components/filters/CollapsibleFiltersPanel';
 import {
-  PLAYER_BROWSE_POSITION_OPTIONS,
-  PLAYER_BROWSE_TEAM_OPTIONS,
   PLAYER_FILTER_LABELS,
   PLAYER_LIST_FILTER_KEYS,
   PREFERRED_FOOT_OPTIONS,
@@ -29,14 +28,6 @@ function unsignedIntegerDisplayForInput(raw) {
   const s = String(raw ?? '').trim();
   if (s === '') return '';
   return /^\d+$/.test(s) ? s : '';
-}
-
-/** Include `current` in the list when it’s not in `fixed` (e.g. deep link or new seed data). */
-function optionsWithCurrent(fixed, current) {
-  const c = String(current ?? '').trim();
-  if (!c) return fixed;
-  if (fixed.includes(c)) return fixed;
-  return [...fixed, c].sort((a, b) => a.localeCompare(b));
 }
 
 /**
@@ -80,38 +71,36 @@ export default function PlayersBrowseFilters({
     const label = PLAYER_FILTER_LABELS[key] || key;
 
     if (key === 'team') {
-      const teamChoices = optionsWithCurrent(PLAYER_BROWSE_TEAM_OPTIONS, values.team);
       return (
-        <BrowseFilterSelect
+        <PlayerLookupSelect
+          kind="team"
           id={`players-browse-filter-${key}`}
           fieldLabel={PLAYER_FILTER_LABELS[key] || key}
           value={values[key] ?? ''}
           onChange={(v) => handleChange(key, v)}
           disabled={loading || browseFiltersLocked}
           placeholderLabel="All teams"
-          options={teamChoices.map((t) => ({ value: t, label: t }))}
         />
       );
     }
 
     if (key === 'position') {
-      const positionChoices = optionsWithCurrent(PLAYER_BROWSE_POSITION_OPTIONS, values.position);
       return (
-        <BrowseFilterSelect
+        <PlayerLookupSelect
+          kind="position"
           id={`players-browse-filter-${key}`}
           fieldLabel={PLAYER_FILTER_LABELS[key] || key}
           value={values[key] ?? ''}
           onChange={(v) => handleChange(key, v)}
           disabled={loading || browseFiltersLocked}
           placeholderLabel="All positions"
-          options={positionChoices.map((p) => ({ value: p, label: p }))}
         />
       );
     }
 
     if (key === 'preferred_foot') {
       return (
-        <BrowseFilterSelect
+        <ResponsiveSelect
           id={`players-browse-filter-${key}`}
           fieldLabel={PLAYER_FILTER_LABELS[key] || key}
           value={preferredFootSelectValue(values[key])}

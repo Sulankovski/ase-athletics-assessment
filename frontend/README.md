@@ -31,7 +31,6 @@ npm run dev
 
 ```bash
 npm run build
-npm run preview   # optional: serve dist/ locally
 ```
 
 Output: `frontend/dist/`. Configure your host to serve the SPA and point API calls at your deployed backend; set **`VITE_BACKEND_URL`** at **build time** if the client uses absolute API URLs.

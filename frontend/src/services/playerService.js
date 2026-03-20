@@ -82,3 +82,13 @@ export function deletePlayer(id) {
 export function createPlayer(body) {
   return api.post('/players', body);
 }
+
+/** Authenticated GET `/players/teams` — `{ teams: string[] }` from DB. */
+export function fetchPlayerTeams() {
+  return api.get('/players/teams');
+}
+
+/** Authenticated GET `/players/positions` — `{ positions: string[] }` from DB. */
+export function fetchPlayerPositions() {
+  return api.get('/players/positions');
+}

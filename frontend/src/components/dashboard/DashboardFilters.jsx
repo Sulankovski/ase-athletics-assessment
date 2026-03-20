@@ -1,3 +1,4 @@
+import PlayerLookupSelect from '@/components/filters/PlayerLookupSelect';
 import CollapsibleFiltersPanel from '@/components/filters/CollapsibleFiltersPanel';
 
 /** @param {Record<string, unknown> | null} summary */
@@ -26,7 +27,6 @@ export function dashboardAppliedSummaryToChips(summary) {
 export default function DashboardFilters({
   values,
   onChange,
-  teamOptions = [],
   onApply,
   onClear,
   onRemoveAppliedKey,
@@ -61,20 +61,15 @@ export default function DashboardFilters({
               <label htmlFor="dash-filter-team" className="block text-xs font-medium text-neutral-gray600 mb-1">
                 Team
               </label>
-              <select
+              <PlayerLookupSelect
+                kind="team"
                 id="dash-filter-team"
-                value={values.team}
-                onChange={(e) => handleChange('team', e.target.value)}
-                disabled={loading || teamOptions.length === 0}
-                className="input w-full py-2 text-sm disabled:opacity-60"
-              >
-                <option value="">All teams</option>
-                {teamOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+                fieldLabel="Team"
+                value={values.team ?? ''}
+                onChange={(v) => handleChange('team', v)}
+                disabled={loading}
+                placeholderLabel="All teams"
+              />
             </div>
 
             <div className="w-full tablet:w-[7rem]">
