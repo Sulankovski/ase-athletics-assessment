@@ -66,7 +66,6 @@ The app opens at **http://localhost:3000**. In dev, Vite proxies `/api/*` to the
 ```bash
 cd frontend
 npm run build
-npm run preview   # optional local check of dist/
 ```
 
 Serve `frontend/dist/` behind any static host; configure the same API base URL / proxy as in production.
@@ -84,4 +83,4 @@ ase-athletics-assessment/
 
 ## License / usage
 
-Internal assessment project — see your organization’s terms.
+Internal assessment project
