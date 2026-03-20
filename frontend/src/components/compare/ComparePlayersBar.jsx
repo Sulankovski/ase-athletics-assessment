@@ -37,7 +37,7 @@ function CompareChipAvatar({ name, imageUrl }) {
   );
 }
 
-const APP_COMPARE_ROUTE = /^\/(dashboard|players)(\/|$)/;
+const APP_COMPARE_ROUTE = /^\/(dashboard|players|compare)(\/|$)/;
 
 /** Exact list route: /players (ignore query string in pathname). */
 function isAllPlayersListPath(pathname) {

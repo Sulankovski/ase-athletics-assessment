@@ -14,10 +14,19 @@ export default function PlayerProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const fromCompare = location.state?.from === 'compare';
   const fromPlayers = location.state?.from === 'players';
-  const backHref = fromPlayers ? '/players' : '/dashboard';
-  const backLabel = fromPlayers ? 'Back to player list' : 'Back to dashboard';
-  const returnLinkLabel = fromPlayers ? 'Return to player list' : 'Return to dashboard';
+  const backHref = fromCompare ? '/compare' : fromPlayers ? '/players' : '/dashboard';
+  const backLabel = fromCompare
+    ? 'Back to compare'
+    : fromPlayers
+      ? 'Back to player list'
+      : 'Back to dashboard';
+  const returnLinkLabel = fromCompare
+    ? 'Return to compare'
+    : fromPlayers
+      ? 'Return to player list'
+      : 'Return to dashboard';
 
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);

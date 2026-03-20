@@ -7,6 +7,17 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  COMPARE_DEFAULT_ATTR_KEYS,
+  COMPARE_DEFAULT_STAT_KEYS,
+} from '@/constants/compareMetrics';
+import { evictComparePlayer, loadComparePlayerForCompare } from '@/utils/comparePlayerCache';
+import {
+  clearCompareMetricsSelection,
+  readCompareMetricsSelection,
+  writeCompareMetricsSelection,
+} from '@/utils/compareMetricsSelectionCache';
 
 export const COMPARE_MIN = 2;
 export const COMPARE_MAX = 4;
@@ -28,10 +39,23 @@ function serializePlayer(player) {
   };
 }
 
+function initialCompareMetrics() {
+  const fromCache = readCompareMetricsSelection();
+  if (fromCache) return { stats: fromCache.stats, attrs: fromCache.attrs };
+  return {
+    stats: [...COMPARE_DEFAULT_STAT_KEYS],
+    attrs: [...COMPARE_DEFAULT_ATTR_KEYS],
+  };
+}
+
 export function ComparePlayersProvider({ children }) {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState(
     /** @type {ComparePlayerEntry[]} */ ([]),
   );
+  const metricsInit = useMemo(() => initialCompareMetrics(), []);
+  const [compareStatsKeys, setCompareStatsKeys] = useState(metricsInit.stats);
+  const [compareAttrKeys, setCompareAttrKeys] = useState(metricsInit.attrs);
   const [infoMessage, setInfoMessage] = useState(null);
   /** True while dragging a player card toward the compare list (All players page). */
   const [compareListDragActive, setCompareListDragActive] = useState(false);
@@ -53,6 +77,10 @@ export function ComparePlayersProvider({ children }) {
     return () => window.clearTimeout(t);
   }, [infoMessage]);
 
+  useEffect(() => {
+    writeCompareMetricsSelection(compareStatsKeys, compareAttrKeys);
+  }, [compareStatsKeys, compareAttrKeys]);
+
   const clearInfoMessage = useCallback(() => setInfoMessage(null), []);
 
   const beginCompareListDrag = useCallback(() => setCompareListDragActive(true), []);
@@ -68,9 +96,14 @@ export function ComparePlayersProvider({ children }) {
     const next = [...prev, serializePlayer(player)];
     selectedRef.current = next;
     setSelected(next);
+    loadComparePlayerForCompare(player.id).catch(() => {});
   }, []);
 
   const removeFromCompare = useCallback((id) => {
+    evictComparePlayer(id);
+    clearCompareMetricsSelection();
+    setCompareStatsKeys([...COMPARE_DEFAULT_STAT_KEYS]);
+    setCompareAttrKeys([...COMPARE_DEFAULT_ATTR_KEYS]);
     setSelected((prev) => {
       const next = prev.filter((p) => !sameId(p.id, id));
       selectedRef.current = next;
@@ -90,8 +123,8 @@ export function ComparePlayersProvider({ children }) {
       return;
     }
     setInfoMessage(null);
-    // placeholder — future: navigate to compare view or open modal
-  }, []);
+    navigate('/compare');
+  }, [navigate]);
 
   const value = useMemo(
     () => ({
@@ -104,6 +137,10 @@ export function ComparePlayersProvider({ children }) {
       clearInfoMessage,
       compareListDragActive,
       beginCompareListDrag,
+      compareStatsKeys,
+      compareAttrKeys,
+      setCompareStatsKeys,
+      setCompareAttrKeys,
     }),
     [
       selected,
@@ -115,6 +152,10 @@ export function ComparePlayersProvider({ children }) {
       clearInfoMessage,
       compareListDragActive,
       beginCompareListDrag,
+      compareStatsKeys,
+      compareAttrKeys,
+      setCompareStatsKeys,
+      setCompareAttrKeys,
     ],
   );
 

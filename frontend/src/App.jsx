@@ -6,6 +6,7 @@ import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
 import PlayersListPage from './pages/PlayersListPage';
 import PlayerProfilePage from './pages/PlayerProfilePage';
+import ComparePlayersPage from './pages/ComparePlayersPage';
 
 function App() {
   return (
@@ -34,6 +35,14 @@ function App() {
         element={
           <ProtectedRoute>
             <PlayerProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/compare"
+        element={
+          <ProtectedRoute>
+            <ComparePlayersPage />
           </ProtectedRoute>
         }
       />
