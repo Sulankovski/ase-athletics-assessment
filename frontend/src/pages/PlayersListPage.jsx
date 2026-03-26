@@ -379,7 +379,7 @@ export default function PlayersListPage() {
           <>
             <div className="grid items-start gap-4 tablet:gap-5 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 large:grid-cols-4 min-w-0 flex-1 content-start">
               {players.map((p) => (
-                <PlayerListCard key={p.id} player={p} />
+                <PlayerListCard key={p.id} player={p} highlightQuery={listTextQuery} />
               ))}
             </div>
 

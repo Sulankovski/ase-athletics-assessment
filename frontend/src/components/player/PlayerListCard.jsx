@@ -5,6 +5,7 @@ import { formatSalary, formatShortDate, formatMarketValue } from '@/utils/format
 import { PLAYER_NAV_FROM_PLAYERS_LIST } from '@/constants/navigation';
 import { COMPARE_PLAYER_MIME, buildCompareDragPayload } from '@/constants/compareDnD';
 import { useComparePlayers } from '@/context/ComparePlayersContext';
+import { highlightText } from '@/utils/highlightSearch';
 
 function isLikelyHttpImage(s) {
   return typeof s === 'string' && (s.startsWith('http') || s.startsWith('/'));
@@ -23,7 +24,7 @@ function displayStr(v) {
   return String(v);
 }
 
-export default function PlayerListCard({ player }) {
+export default function PlayerListCard({ player, highlightQuery = '' }) {
   const id = player?.id;
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { addForCompare, isInCompareList, beginCompareListDrag } = useComparePlayers();
@@ -113,7 +114,7 @@ export default function PlayerListCard({ player }) {
               state={PLAYER_NAV_FROM_PLAYERS_LIST}
               className="min-w-0 truncate text-base font-bold leading-tight text-neutral-gray900 hover:text-primary-800 tablet:text-lg"
             >
-              {player?.name ?? '—'}
+              {highlightText(player?.name, highlightQuery)}
             </Link>
             <button
               type="button"
@@ -141,10 +142,17 @@ export default function PlayerListCard({ player }) {
           <div className="mt-2 flex flex-col items-stretch gap-3 tablet:flex-row tablet:items-center tablet:justify-between tablet:gap-4">
             <div className="min-w-0 space-y-1 tablet:flex-1">
               <p className="text-sm text-neutral-gray600">
-                Age <span className="font-semibold text-neutral-gray800">{player?.age ?? '—'}</span>
+                Age{' '}
+                <span className="font-semibold text-neutral-gray800">
+                  {highlightText(player?.age, highlightQuery)}
+                </span>
               </p>
-              <p className="truncate text-sm text-neutral-gray600">{player?.team ?? '—'}</p>
-              <p className="text-sm font-medium text-primary-800">{player?.position ?? '—'}</p>
+              <p className="truncate text-sm text-neutral-gray600">
+                {highlightText(player?.team, highlightQuery)}
+              </p>
+              <p className="text-sm font-medium text-primary-800">
+                {highlightText(player?.position, highlightQuery)}
+              </p>
             </div>
             {!inCompare && (
               <button
@@ -176,7 +184,9 @@ export default function PlayerListCard({ player }) {
                     aria-hidden
                   />
                   <dt className={`font-medium ${detailLabelTone}`}>{label}:</dt>
-                  <dd className="min-w-0 break-words text-neutral-gray800">{value}</dd>
+                  <dd className="min-w-0 break-words text-neutral-gray800">
+                    {highlightText(value, highlightQuery)}
+                  </dd>
                 </div>
               ))}
             </dl>
